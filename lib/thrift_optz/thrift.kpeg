@@ -1,0 +1,305 @@
+%% name = GlassParser
+
+%% namespace = ast Namespace(lang, namespace)
+%% include = ast Include(path)
+%% struct = ast Struct(name, fields)
+%% field = ast Field(index, type, name)
+%% function = ast Function(name, return_type, arguments)
+%% service = ast Service(name, functions)
+
+intconstant   = /([+-]?[0-9]+)/
+hexconstant   = /("0x"[0-9A-Fa-f]+)/
+dubconstant   = /([+-]?[0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?)/
+identifier    = /([a-zA-Z_][\.a-zA-Z_0-9]*)/
+whitespace    = /([ \t\r\n]*)/
+# sillycomm     = /("\/*""*"*"*\/")/
+# multicomm     = /("\/*"[^*]"\/"*([^*\/]|[^*]"\/"|"*"[^\/])*"*"*"*\/")/
+# doctext       = "\/**" (/[^\*\/]|[^\*]/ "\/"|"*" /[^\/]/)* "*"* "*\/"
+# comment       = /("//"[^\n]*)/
+# unixcomment   = /("#"[^\n]*)/
+st_identifier = /([a-zA-Z-][\.a-zA-Z_0-9-]*)/
+literal_begin = /(['\"])/
+
+reserved = 
+  "BEGIN"              |
+  "END"                |
+  "__CLASS__"          |
+  "__DIR__"            |
+  "__FILE__"           |
+  "__FUNCTION__"       |
+  "__LINE__"           |
+  "__METHOD__"         |
+  "__NAMESPACE__"      |
+  "abstract"           |
+  "alias"              |
+  "and"                |
+  "args"               |
+  "as"                 |
+  "assert"             |
+  "begin"              |
+  "break"              |
+  "case"               |
+  "catch"              |
+  "class"              |
+  "clone"              |
+  "continue"           |
+  "declare"            |
+  "def"                |
+  "default"            |
+  "del"                |
+  "delete"             |
+  "do"                 |
+  "dynamic"            |
+  "elif"               |
+  "else"               |
+  "elseif"             |
+  "elsif"              |
+  "end"                |
+  "enddeclare"         |
+  "endfor"             |
+  "endforeach"         |
+  "endif"              |
+  "endswitch"          |
+  "endwhile"           |
+  "ensure"             |
+  "except"             |
+  "exec"               |
+  "finally"            |
+  "float"              |
+  "for"                |
+  "foreach"            |
+  "function"           |
+  "global"             |
+  "goto"               |
+  "if"                 |
+  "implements"         |
+  "import"             |
+  "in"                 |
+  "inline"             |
+  "instanceof"         |
+  "interface"          |
+  "is"                 |
+  "lambda"             |
+  "module"             |
+  "native"             |
+  "new"                |
+  "next"               |
+  "nil"                |
+  "not"                |
+  "or"                 |
+  "pass"               |
+  "public"             |
+  "print"              |
+  "private"            |
+  "protected"          |
+  "public"             |
+  "raise"              |
+  "redo"               |
+  "rescue"             |
+  "retry"              |
+  "register"           |
+  "return"             |
+  "self"               |
+  "sizeof"             |
+  "static"             |
+  "super"              |
+  "switch"             |
+  "synchronized"       |
+  "then"               |
+  "this"               |
+  "throw"              |
+  "transient"          |
+  "try"                |
+  "undef"              |
+  "union"              |
+  "unless"             |
+  "unsigned"           |
+  "until"              |
+  "use"                |
+  "var"                |
+  "virtual"            |
+  "volatile"           |
+  "when"               |
+  "while"              |
+  "with"               |
+  "xor"                |
+  "yield"              
+
+
+tok_int_constant = < intconstant > { text.to_i }
+                 | < hexconstant > { text.to_i }
+                 | "false" { 0 }
+                 | "true"  { 1 }
+
+tok_dub_constant = dubconstant:f { f.to_f }
+
+tok_identifier = < identifier > ~text
+tok_st_identifier = st_identifier
+
+escapes = "\\r"  { "\r" }
+         | "\\n" { "\n" }
+         | "\\t" { "\t" }
+         | "\\\"" { "\"" }
+         | "\\'"   { "'" }
+         | "\\\\" { "\\" }
+
+tok_literal = "\"" (escapes | !"\"" . )*:c "\"" { c.join }
+            | "'"  (escapes | !"'" .  )*:c "'"  { c.join }
+
+- = /[\s\t]+/
+osp = /[\s\t]*/
+bsp = /[\s\t\n]+/
+obsp = /[\s\t\n]*/
+
+root = Program
+
+# Program = HeaderList - DefinitionList
+
+Program = Element*:a { a }
+
+CaptureDocText = {}
+DestroyDocText = {}
+HeaderList = HeaderList Header
+           | Header
+
+Element = Header bsp
+        | Definition bsp
+
+Header = Include | Namespace
+
+Namespace = "namespace" - tok_identifier:l - tok_identifier:n ~namespace(l,n)
+          | "namespace" - "*" - tok_identifier:n ~namespace(nil,n)
+
+Include = "include" - tok_literal:f ~include(f)
+
+DefinitionList = DefinitionList CaptureDocText Definition
+
+Definition = Const
+           | TypeDefinition
+           | Service
+
+TypeDefinition = Typedef
+               | Enum
+               | Senum
+               | Struct
+               | Xception
+
+Typedef = "typedef" - FieldType tok_identifier
+
+CommaOrSemicolonOptional = ("," | ";")? obsp
+
+Enum = "enum" - tok_identifier "{" EnumDefList "}"
+
+EnumDefList = EnumDefList EnumDef
+
+EnumDef = CaptureDocText tok_identifier "=" tok_int_constant CommaOrSemicolonOptional
+        | CaptureDocText tok_identifier CommaOrSemicolonOptional
+
+Senum = "senum" - tok_identifier "{" SenumDefList "}"
+
+SenumDefList = SenumDefList SenumDef
+             | nothing
+
+SenumDef = tok_literal CommaOrSemicolonOptional
+
+Const = "const" - FieldType tok_identifier "=" ConstValue CommaOrSemicolonOptional
+
+ConstValue = tok_int_constant
+           | tok_dub_constant
+           | tok_literal
+           | tok_identifier
+           | ConstList
+           | ConstMap
+
+ConstList = "[" ConstListContents "]"
+
+ConstListContents = ConstListContents ConstValue CommaOrSemicolonOptional
+                  | nothing
+
+ConstMapContents = ConstMapContents ConstValue ":" ConstValue CommaOrSemicolonOptional
+                 | nothing
+
+StructHead = "struct" | "union"
+
+Struct = StructHead - tok_identifier:name - XsdAll? osp
+         "{" obsp FieldList?:list obsp "}" # TypeAnnotations
+         ~struct(name,list)
+
+XsdAll = "xsd_all"
+
+XsdOptional = "xsd_optional" - | nothing
+
+XsdNillable = "xsd_nillable" - | nothing
+
+XsdAttributes = "xsd_attrs" - "{" FieldList "}"
+              | nothing
+
+Xception = "exception" - tok_identifier "{" FieldList "}"
+
+Service = "service" - tok_identifier:name - Extends? osp
+          "{" obsp FunctionList?:funcs obsp "}"
+          ~service(name, funcs)
+
+Extends = "extends" - tok_identifier
+
+FunctionList = FunctionList:l Function:f { l + [f] }
+             | Function:f { [f] }
+
+Function = CaptureDocText OneWay? FunctionType:rt - tok_identifier:name
+           osp "(" FieldList:args ")" Throws? CommaOrSemicolonOptional
+           ~function(name, rt, args)
+
+OneWay = ("oneway" | "async" )
+
+Throws = "throws" - "(" FieldList ")"
+
+FieldList = FieldList:l Field:f { l + [f] }
+          | Field:f { [f] }
+
+Field = CaptureDocText FieldIdentifier?:i osp FieldRequiredness osp
+        FieldType:t osp tok_identifier:n osp FieldValue
+        CommaOrSemicolonOptional
+        ~field(i,t,n)
+
+        # XsdOptional XsdNillable XsdAttributes TypeAnnotations
+FieldIdentifier = tok_int_constant:n ":" ~n
+
+FieldRequiredness = ("required" | "optional")?
+
+FieldValue = ("=" ConstValue)?
+
+FunctionType = FieldType | "void"
+
+FieldType = tok_identifier:n ~n
+          | BaseType
+          | ContainerType
+
+BaseType = SimpleBaseType:t TypeAnnotations ~t
+
+SimpleBaseType = "string" { :string }
+               | "binary" { :binary }
+               | "slist"  { :slist }
+               | "bool"   { :bool }
+               | "byte"   { :byte }
+               | "i16"    { :i16 }
+               | "i32"    { :i32 }
+               | "i64"    { :i64 }
+               | "double" { :double }
+
+ContainerType = SimpleContainerType TypeAnnotations
+
+SimpleContainerType = MapType | SetType | ListType
+
+MapType = "map" - CppType "<" FieldType "," FieldType ">"
+
+SetType = "set" CppType "<" FieldType ">"
+
+ListType = "list" "<" FieldType ">" CppType
+
+CppType = tok_cpp_type tok_literal
+        | nothing
+
+TypeAnnotationList = TypeAnnotationList TypeAnnotation
+
+TypeAnnotation = tok_identifier "=" tok_literal CommaOrSemicolonOptional
+

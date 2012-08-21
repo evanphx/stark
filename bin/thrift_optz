@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'thrift_optz/parser'
+require 'thrift_optz/ruby'
+
+data = File.read ARGV.shift
+
+tg = ThriftOptz::Parser.new data
+
+unless tg.parse
+  tg.raise_error
+end
+
+ruby = ThriftOptz::Ruby.new
+
+tg.result.each { |i| i.accept ruby }

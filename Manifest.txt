@@ -1,0 +1,8 @@
+.autotest
+History.txt
+Manifest.txt
+README.txt
+Rakefile
+bin/thrift_optz
+lib/thrift_optz.rb
+test/test_thrift_optz.rb
