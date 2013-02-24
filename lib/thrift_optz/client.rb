@@ -14,6 +14,10 @@ module ThriftOptz
       end
     end
 
+    def handle_unexpected(rtype)
+      return if rtype == ::Thrift::Types::STOP
+    end
+
     def read_generic(type, id, cls)
       ip = @iprot
 

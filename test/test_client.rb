@@ -32,9 +32,10 @@ class TestClient < Test::Unit::TestCase
     def initialize
       @users = {}
       @last_map = nil
+      @last_list = nil
     end
 
-    attr_accessor :last_map
+    attr_accessor :last_map, :last_list
 
     def store(obj)
       @users[obj.uid] = obj
@@ -46,6 +47,10 @@ class TestClient < Test::Unit::TestCase
 
     def set_map(m)
       @last_map = m
+    end
+
+    def set_list(l)
+      @last_list = l
     end
   end
 
@@ -101,5 +106,50 @@ class TestClient < Test::Unit::TestCase
 
     assert_equal "foo", m["blah"]
     assert_equal "b", m["a"]
+  end
+
+  def test_set_list
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    m = [ "blah", "foo", "a", "b" ]
+
+    @client.set_list m
+
+    st.join
+
+    assert_equal m, @handler.last_list
+  end
+
+  def test_last_list
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    l = [ "blah", "foo", "a", "b" ]
+    @handler.last_list = l
+
+    begin
+      assert_equal l, @client.last_list
+    rescue Interrupt => e
+      puts e.backtrace
+    end
+
+    st.join
+  end
+
+  def test_last_list_wrong_type
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    begin
+      assert_equal nil, @client.last_list
+    rescue Interrupt => e
+      puts e.backtrace
+    end
+
+    st.join
   end
 end

@@ -69,6 +69,35 @@ module UserStorage
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'last_map failed: unknown result')
     end
 
+    def set_list(l)
+      send_set_list(l)
+      recv_set_list()
+    end
+
+    def send_set_list(l)
+      send_message('set_list', Set_list_args, :l => l)
+    end
+
+    def recv_set_list()
+      result = receive_message(Set_list_result)
+      return
+    end
+
+    def last_list()
+      send_last_list()
+      return recv_last_list()
+    end
+
+    def send_last_list()
+      send_message('last_list', Last_list_args)
+    end
+
+    def recv_last_list()
+      result = receive_message(Last_list_result)
+      return result.success unless result.success.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'last_list failed: unknown result')
+    end
+
   end
 
   class Processor
@@ -100,6 +129,20 @@ module UserStorage
       result = Last_map_result.new()
       result.success = @handler.last_map()
       write_result(result, oprot, 'last_map', seqid)
+    end
+
+    def process_set_list(seqid, iprot, oprot)
+      args = read_args(iprot, Set_list_args)
+      result = Set_list_result.new()
+      @handler.set_list(args.l)
+      write_result(result, oprot, 'set_list', seqid)
+    end
+
+    def process_last_list(seqid, iprot, oprot)
+      args = read_args(iprot, Last_list_args)
+      result = Last_list_result.new()
+      result.success = @handler.last_list()
+      write_result(result, oprot, 'last_list', seqid)
     end
 
   end
@@ -221,6 +264,68 @@ module UserStorage
 
     FIELDS = {
       SUCCESS => {:type => ::Thrift::Types::MAP, :name => 'success', :key => {:type => ::Thrift::Types::STRING}, :value => {:type => ::Thrift::Types::STRING}}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_list_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    L = 1
+
+    FIELDS = {
+      L => {:type => ::Thrift::Types::LIST, :name => 'l', :element => {:type => ::Thrift::Types::STRING}}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_list_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Last_list_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Last_list_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::LIST, :name => 'success', :element => {:type => ::Thrift::Types::STRING}}
     }
 
     def struct_fields; FIELDS; end

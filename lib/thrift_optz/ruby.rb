@@ -203,6 +203,13 @@ module ThriftOptz
 
             o "op.write_map_end"
             o "op.write_field_end"
+          elsif arg.type.kind_of? ThriftOptz::Parser::AST::List
+            o "op.write_field_begin '#{arg.name}', ::Thrift::Types::LIST, #{arg.index}"
+            o "op.write_list_begin(#{wire_type(arg.type.value)}, #{arg.name}.size)"
+            o "#{arg.name}.each { |v| op.#{write_func(arg.type.value)}(v) }"
+            o "op.write_list_end"
+
+            o "op.write_field_end"
           elsif arg.type != "void"
             o "op.write_field_begin '#{arg.name}', #{type(arg.type)}, #{arg.index}"
             o "op.#{write_func(arg.type)} #{arg.name}"
@@ -238,6 +245,16 @@ module ThriftOptz
             o "  result[ip.#{read_func(ft.key)}] = ip.#{read_func(ft.value)}"
             o "end"
             o "ip.read_map_end"
+          elsif func.return_type.kind_of? ThriftOptz::Parser::AST::List
+            ft = func.return_type
+            o "_, rtype, rid = ip.read_field_begin"
+            o "if rtype == ::Thrift::Types::LIST"
+            o "  _, size = ip.read_list_begin"
+            o "  result = Array.new(size) { |n| ip.#{read_func(ft.value)} }"
+            o "  ip.read_list_end"
+            o "else"
+            o "  handle_unexpected rtype"
+            o "end"
           else
             o "_, rtype, _ = ip.read_field_begin"
             o "if rtype == #{type(func.return_type)}"
@@ -245,7 +262,7 @@ module ThriftOptz
             o "end"
           end
 
-          o "_, rtype, rid = ip.read_field_begin"
+          o "_, rtype, rid = ip.read_field_begin unless rtype == ::Thrift::Types::STOP"
         end
 
         o "fail if rtype != ::Thrift::Types::STOP"
