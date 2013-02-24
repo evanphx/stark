@@ -9,8 +9,6 @@ $: << "test/legacy_profile"
 
 require 'user_storage'
 
-Thread.abort_on_exception = true
-
 class TestClient < Test::Unit::TestCase
   def setup
     @client_t, @server_t = ThriftOptz.pipe_transport
@@ -21,7 +19,8 @@ class TestClient < Test::Unit::TestCase
     ThriftOptz.materialize "test/profile.thrift", @n
 
     @client = @n::UserStorage::Client.new @client_p, @client_p
-    @server = UserStorage::Processor.new Handler.new
+    @handler = Handler.new
+    @server = UserStorage::Processor.new @handler
   end
 
   def teardown
@@ -32,7 +31,10 @@ class TestClient < Test::Unit::TestCase
   class Handler
     def initialize
       @users = {}
+      @last_map = nil
     end
+
+    attr_accessor :last_map
 
     def store(obj)
       @users[obj.uid] = obj
@@ -41,9 +43,13 @@ class TestClient < Test::Unit::TestCase
     def retrieve(id)
       @users[id]
     end
+
+    def set_map(m)
+      @last_map = m
+    end
   end
 
-  def test_client
+  def test_store_and_retrieve
     st = Thread.new do
       @server.process @server_p, @server_p
     end
@@ -65,5 +71,35 @@ class TestClient < Test::Unit::TestCase
     assert_equal 0, obj.uid
     assert_equal "root", obj.name
     assert_equal "god", obj.blurb
+  end
+
+  def test_set_map
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    m = { "blah" => "foo", "a" => "b" }
+
+    @client.set_map m
+
+    st.join
+
+    assert_equal "foo", @handler.last_map["blah"]
+    assert_equal "b", @handler.last_map["a"]
+  end
+
+  def test_last_map
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    @handler.last_map = { "blah" => "foo", "a" => "b" }
+
+    m = @client.last_map
+
+    st.join
+
+    assert_equal "foo", m["blah"]
+    assert_equal "b", m["a"]
   end
 end

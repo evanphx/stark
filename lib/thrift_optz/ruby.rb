@@ -61,19 +61,37 @@ module ThriftOptz
     end
 
     CoreTypes = {
+      'bool' => "::Thrift::Types::BOOL",
+      'byte' => "::Thrift::Types::BYTE",
+      'double' => "::Thrift::Types::DOUBLE",
+      'i16' => "::Thrift::Types::I16",
       'i32' => "::Thrift::Types::I32",
-      'string' => '::Thrift::Types::STRING'
+      'i64' => "::Thrift::Types::I64",
+      'string' => '::Thrift::Types::STRING',
+      'struct' => '::Thrift::Types::STRUCT',
+      'map' => '::Thrift::Types::MAP',
+      'set' => '::Thrift::Types::SET',
+      'list' => '::Thrift::Types::LIST'
     }
 
     ReadFunc = {
+      'bool' => 'read_bool',
+      'byte' => 'read_byte',
+      'double' => 'read_double',
+      'i16' => "read_i16",
       'i32' => "read_i32",
+      'i64' => "read_i64",
       'string' => 'read_string',
-      'void' => 'read_void'
     }
 
     WriteFunc = {
+      'bool' => 'write_bool',
+      'byte' => 'write_byte',
+      'double' => 'write_double',
+      'i16' => "write_i16",
       'i32' => "write_i32",
-      'string' => 'write_string'
+      'i64' => "write_i64",
+      'string' => 'write_string',
     }
 
     def type(t)
@@ -82,7 +100,16 @@ module ThriftOptz
 
     def wire_type(t)
       return "::Thrift::Types::STRUCT" if @structs[t]
-      type t
+      case t
+      when ThriftOptz::Parser::AST::Map
+        "::Thrift::Types::MAP"
+      when ThriftOptz::Parser::AST::List
+        "::Thrift::Types::LIST"
+      when ThriftOptz::Parser::AST::Set
+        "::Thrift::Types::SET"
+      else
+        type t
+      end
     end
 
     def object_type(t)
@@ -141,7 +168,7 @@ module ThriftOptz
 
         o "    :args => {"
 
-        func.arguments.each do |a|
+        Array(func.arguments).each do |a|
           o "      #{a.index} => #{wire_type(a.type)}"
         end
 
@@ -150,7 +177,7 @@ module ThriftOptz
       end
 
       serv.functions.each do |func|
-        names = func.arguments.map { |f| f.name }.join(", ")
+        names = Array(func.arguments).map { |f| f.name }.join(", ")
 
         o "def #{func.name}(#{names})"
         indent
@@ -158,12 +185,25 @@ module ThriftOptz
         o "op.write_message_begin '#{func.name}', ::Thrift::MessageTypes::CALL, 0"
         o "op.write_struct_begin \"#{func.name}_args\""
 
-        func.arguments.each do |arg|
+        Array(func.arguments).each do |arg|
           if desc = @structs[arg.type]
             o "op.write_field_begin '#{arg.name}', ::Thrift::Types::STRUCT, #{arg.index}"
             output_struct desc, arg.name
             o "op.write_field_end"
-          else
+          elsif arg.type.kind_of? ThriftOptz::Parser::AST::Map
+            o "op.write_field_begin '#{arg.name}', ::Thrift::Types::MAP, #{arg.index}"
+            o "op.write_map_begin(#{wire_type(arg.type.key)}, #{wire_type(arg.type.value)}, #{arg.name}.size)"
+
+            o "#{arg.name}.each do |k,v|"
+            indent
+            o "op.#{write_func(arg.type.key)} k"
+            o "op.#{write_func(arg.type.value)} v"
+            outdent
+            o "end"
+
+            o "op.write_map_end"
+            o "op.write_field_end"
+          elsif arg.type != "void"
             o "op.write_field_begin '#{arg.name}', #{type(arg.type)}, #{arg.index}"
             o "op.#{write_func(arg.type)} #{arg.name}"
             o "op.write_field_end"
@@ -188,6 +228,16 @@ module ThriftOptz
           if desc = @structs[func.return_type]
             o "_, rtype, rid = ip.read_field_begin"
             o "result = read_generic rtype, rid, #{desc.name}"
+          elsif func.return_type.kind_of? ThriftOptz::Parser::AST::Map
+            ft = func.return_type
+
+            o "_, rtype, rid = ip.read_field_begin"
+            o "_, _, size = ip.read_map_begin"
+            o "result = {}"
+            o "size.times do"
+            o "  result[ip.#{read_func(ft.key)}] = ip.#{read_func(ft.value)}"
+            o "end"
+            o "ip.read_map_end"
           else
             o "_, rtype, _ = ip.read_field_begin"
             o "if rtype == #{type(func.return_type)}"

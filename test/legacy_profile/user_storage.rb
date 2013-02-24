@@ -40,6 +40,35 @@ module UserStorage
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'retrieve failed: unknown result')
     end
 
+    def set_map(m)
+      send_set_map(m)
+      recv_set_map()
+    end
+
+    def send_set_map(m)
+      send_message('set_map', Set_map_args, :m => m)
+    end
+
+    def recv_set_map()
+      result = receive_message(Set_map_result)
+      return
+    end
+
+    def last_map()
+      send_last_map()
+      return recv_last_map()
+    end
+
+    def send_last_map()
+      send_message('last_map', Last_map_args)
+    end
+
+    def recv_last_map()
+      result = receive_message(Last_map_result)
+      return result.success unless result.success.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'last_map failed: unknown result')
+    end
+
   end
 
   class Processor
@@ -57,6 +86,20 @@ module UserStorage
       result = Retrieve_result.new()
       result.success = @handler.retrieve(args.xuid)
       write_result(result, oprot, 'retrieve', seqid)
+    end
+
+    def process_set_map(seqid, iprot, oprot)
+      args = read_args(iprot, Set_map_args)
+      result = Set_map_result.new()
+      @handler.set_map(args.m)
+      write_result(result, oprot, 'set_map', seqid)
+    end
+
+    def process_last_map(seqid, iprot, oprot)
+      args = read_args(iprot, Last_map_args)
+      result = Last_map_result.new()
+      result.success = @handler.last_map()
+      write_result(result, oprot, 'last_map', seqid)
     end
 
   end
@@ -116,6 +159,68 @@ module UserStorage
 
     FIELDS = {
       SUCCESS => {:type => ::Thrift::Types::STRUCT, :name => 'success', :class => UserProfile}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_map_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    M = 1
+
+    FIELDS = {
+      M => {:type => ::Thrift::Types::MAP, :name => 'm', :key => {:type => ::Thrift::Types::STRING}, :value => {:type => ::Thrift::Types::STRING}}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_map_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Last_map_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Last_map_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::MAP, :name => 'success', :key => {:type => ::Thrift::Types::STRING}, :value => {:type => ::Thrift::Types::STRING}}
     }
 
     def struct_fields; FIELDS; end
