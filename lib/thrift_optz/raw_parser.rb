@@ -355,15 +355,75 @@ class ThriftOptz::Parser
 
   module AST
     class Node; end
+    class Comment < Node
+      def initialize(text)
+        @text = text
+      end
+      attr_reader :text
+    end
+    class ConstDouble < Node
+      def initialize(value)
+        @value = value
+      end
+      attr_reader :value
+    end
+    class ConstIdentifier < Node
+      def initialize(value)
+        @value = value
+      end
+      attr_reader :value
+    end
+    class ConstInt < Node
+      def initialize(value)
+        @value = value
+      end
+      attr_reader :value
+    end
+    class ConstList < Node
+      def initialize(values)
+        @values = values
+      end
+      attr_reader :values
+    end
+    class ConstMap < Node
+      def initialize(values)
+        @values = values
+      end
+      attr_reader :values
+    end
+    class ConstString < Node
+      def initialize(value)
+        @value = value
+      end
+      attr_reader :value
+    end
+    class Enum < Node
+      def initialize(values)
+        @values = values
+      end
+      attr_reader :values
+    end
+    class Exception < Node
+      def initialize(name, fields)
+        @name = name
+        @fields = fields
+      end
+      attr_reader :name
+      attr_reader :fields
+    end
     class Field < Node
-      def initialize(index, type, name)
+      def initialize(index, type, name, value, options)
         @index = index
         @type = type
         @name = name
+        @value = value
+        @options = options
       end
       attr_reader :index
       attr_reader :type
       attr_reader :name
+      attr_reader :value
+      attr_reader :options
     end
     class Function < Node
       def initialize(name, return_type, arguments)
@@ -381,6 +441,20 @@ class ThriftOptz::Parser
       end
       attr_reader :path
     end
+    class List < Node
+      def initialize(value)
+        @value = value
+      end
+      attr_reader :value
+    end
+    class Map < Node
+      def initialize(key, value)
+        @key = key
+        @value = value
+      end
+      attr_reader :key
+      attr_reader :value
+    end
     class Namespace < Node
       def initialize(lang, namespace)
         @lang = lang
@@ -397,17 +471,52 @@ class ThriftOptz::Parser
       attr_reader :name
       attr_reader :functions
     end
+    class Set < Node
+      def initialize(value)
+        @value = value
+      end
+      attr_reader :value
+    end
     class Struct < Node
-      def initialize(name, fields)
+      def initialize(type, name, fields)
+        @type = type
         @name = name
         @fields = fields
       end
+      attr_reader :type
       attr_reader :name
       attr_reader :fields
     end
   end
-  def field(index, type, name)
-    AST::Field.new(index, type, name)
+  def comment(text)
+    AST::Comment.new(text)
+  end
+  def const_dbl(value)
+    AST::ConstDouble.new(value)
+  end
+  def const_id(value)
+    AST::ConstIdentifier.new(value)
+  end
+  def const_int(value)
+    AST::ConstInt.new(value)
+  end
+  def const_list(values)
+    AST::ConstList.new(values)
+  end
+  def const_map(values)
+    AST::ConstMap.new(values)
+  end
+  def const_str(value)
+    AST::ConstString.new(value)
+  end
+  def enum(values)
+    AST::Enum.new(values)
+  end
+  def exception(name, fields)
+    AST::Exception.new(name, fields)
+  end
+  def field(index, type, name, value, options)
+    AST::Field.new(index, type, name, value, options)
   end
   def function(name, return_type, arguments)
     AST::Function.new(name, return_type, arguments)
@@ -415,14 +524,23 @@ class ThriftOptz::Parser
   def include(path)
     AST::Include.new(path)
   end
+  def list(value)
+    AST::List.new(value)
+  end
+  def map(key, value)
+    AST::Map.new(key, value)
+  end
   def namespace(lang, namespace)
     AST::Namespace.new(lang, namespace)
   end
   def service(name, functions)
     AST::Service.new(name, functions)
   end
-  def struct(name, fields)
-    AST::Struct.new(name, fields)
+  def set(value)
+    AST::Set.new(value)
+  end
+  def struct(type, name, fields)
+    AST::Struct.new(type, name, fields)
   end
   def setup_foreign_grammar; end
 
@@ -440,9 +558,23 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # dubconstant = /([+-]?[0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?)/
+  # dubconstant = (/([+-]?[0-9]+(\.[0-9]+)([eE][+-]?[0-9]+)?)/ | /([+-]?[0-9]+([eE][+-]?[0-9]+))/ | /([+-]?(\.[0-9]+)([eE][+-]?[0-9]+)?)/)
   def _dubconstant
-    _tmp = scan(/\A(?-mix:([+-]?[0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?))/)
+
+    _save = self.pos
+    while true # choice
+      _tmp = scan(/\A(?-mix:([+-]?[0-9]+(\.[0-9]+)([eE][+-]?[0-9]+)?))/)
+      break if _tmp
+      self.pos = _save
+      _tmp = scan(/\A(?-mix:([+-]?[0-9]+([eE][+-]?[0-9]+)))/)
+      break if _tmp
+      self.pos = _save
+      _tmp = scan(/\A(?-mix:([+-]?(\.[0-9]+)([eE][+-]?[0-9]+)?))/)
+      break if _tmp
+      self.pos = _save
+      break
+    end # end choice
+
     set_failed_rule :_dubconstant unless _tmp
     return _tmp
   end
@@ -1064,7 +1196,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # tok_literal = ("\"" (escapes | !"\"" .)*:c "\"" { c.join } | "'" (escapes | !"'" .)*:c "'" { c.join })
+  # tok_literal = ("\"" < (escapes | !"\"" .)* > "\"" {text} | "'" < (escapes | !"'" .)* > "'" {text})
   def _tok_literal
 
     _save = self.pos
@@ -1077,7 +1209,7 @@ class ThriftOptz::Parser
           self.pos = _save1
           break
         end
-        _ary = []
+        _text_start = self.pos
         while true
 
           _save3 = self.pos
@@ -1108,12 +1240,12 @@ class ThriftOptz::Parser
             break
           end # end choice
 
-          _ary << @result if _tmp
           break unless _tmp
         end
         _tmp = true
-        @result = _ary
-        c = @result
+        if _tmp
+          text = get_text(_text_start)
+        end
         unless _tmp
           self.pos = _save1
           break
@@ -1123,7 +1255,7 @@ class ThriftOptz::Parser
           self.pos = _save1
           break
         end
-        @result = begin;  c.join ; end
+        @result = begin; text; end
         _tmp = true
         unless _tmp
           self.pos = _save1
@@ -1141,7 +1273,7 @@ class ThriftOptz::Parser
           self.pos = _save6
           break
         end
-        _ary = []
+        _text_start = self.pos
         while true
 
           _save8 = self.pos
@@ -1172,12 +1304,12 @@ class ThriftOptz::Parser
             break
           end # end choice
 
-          _ary << @result if _tmp
           break unless _tmp
         end
         _tmp = true
-        @result = _ary
-        c = @result
+        if _tmp
+          text = get_text(_text_start)
+        end
         unless _tmp
           self.pos = _save6
           break
@@ -1187,7 +1319,7 @@ class ThriftOptz::Parser
           self.pos = _save6
           break
         end
-        @result = begin;  c.join ; end
+        @result = begin; text; end
         _tmp = true
         unless _tmp
           self.pos = _save6
@@ -1204,37 +1336,54 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # - = /[\s\t]+/
+  # - = /[ \t]+/
   def __hyphen_
-    _tmp = scan(/\A(?-mix:[\s\t]+)/)
+    _tmp = scan(/\A(?-mix:[ \t]+)/)
     set_failed_rule :__hyphen_ unless _tmp
     return _tmp
   end
 
-  # osp = /[\s\t]*/
+  # osp = /[ \t]*/
   def _osp
-    _tmp = scan(/\A(?-mix:[\s\t]*)/)
+    _tmp = scan(/\A(?-mix:[ \t]*)/)
     set_failed_rule :_osp unless _tmp
     return _tmp
   end
 
-  # bsp = /[\s\t\n]+/
+  # bsp = /[\s]+/
   def _bsp
-    _tmp = scan(/\A(?-mix:[\s\t\n]+)/)
+    _tmp = scan(/\A(?-mix:[\s]+)/)
     set_failed_rule :_bsp unless _tmp
     return _tmp
   end
 
-  # obsp = /[\s\t\n]*/
+  # obsp = /[\s]*/
   def _obsp
-    _tmp = scan(/\A(?-mix:[\s\t\n]*)/)
+    _tmp = scan(/\A(?-mix:[\s]*)/)
     set_failed_rule :_obsp unless _tmp
     return _tmp
   end
 
-  # root = Program
+  # root = Program !.
   def _root
-    _tmp = apply(:_Program)
+
+    _save = self.pos
+    while true # sequence
+      _tmp = apply(:_Program)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _save1 = self.pos
+      _tmp = get_byte
+      _tmp = _tmp ? nil : true
+      self.pos = _save1
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
     set_failed_rule :_root unless _tmp
     return _tmp
   end
@@ -1266,6 +1415,143 @@ class ThriftOptz::Parser
     end # end sequence
 
     set_failed_rule :_Program unless _tmp
+    return _tmp
+  end
+
+  # CComment = "/*" < (!"*/" .)* > "*/" obsp {comment(text)}
+  def _CComment
+
+    _save = self.pos
+    while true # sequence
+      _tmp = match_string("/*")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _text_start = self.pos
+      while true
+
+        _save2 = self.pos
+        while true # sequence
+          _save3 = self.pos
+          _tmp = match_string("*/")
+          _tmp = _tmp ? nil : true
+          self.pos = _save3
+          unless _tmp
+            self.pos = _save2
+            break
+          end
+          _tmp = get_byte
+          unless _tmp
+            self.pos = _save2
+          end
+          break
+        end # end sequence
+
+        break unless _tmp
+      end
+      _tmp = true
+      if _tmp
+        text = get_text(_text_start)
+      end
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = match_string("*/")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_obsp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; comment(text); end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
+    set_failed_rule :_CComment unless _tmp
+    return _tmp
+  end
+
+  # HComment = "#" < (!"\n" .)* > bsp {comment(text)}
+  def _HComment
+
+    _save = self.pos
+    while true # sequence
+      _tmp = match_string("#")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _text_start = self.pos
+      while true
+
+        _save2 = self.pos
+        while true # sequence
+          _save3 = self.pos
+          _tmp = match_string("\n")
+          _tmp = _tmp ? nil : true
+          self.pos = _save3
+          unless _tmp
+            self.pos = _save2
+            break
+          end
+          _tmp = get_byte
+          unless _tmp
+            self.pos = _save2
+          end
+          break
+        end # end sequence
+
+        break unless _tmp
+      end
+      _tmp = true
+      if _tmp
+        text = get_text(_text_start)
+      end
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_bsp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; comment(text); end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
+    set_failed_rule :_HComment unless _tmp
+    return _tmp
+  end
+
+  # Comment = (CComment | HComment)
+  def _Comment
+
+    _save = self.pos
+    while true # choice
+      _tmp = apply(:_CComment)
+      break if _tmp
+      self.pos = _save
+      _tmp = apply(:_HComment)
+      break if _tmp
+      self.pos = _save
+      break
+    end # end choice
+
+    set_failed_rule :_Comment unless _tmp
     return _tmp
   end
 
@@ -1317,11 +1603,14 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # Element = (Header bsp | Definition bsp)
+  # Element = (Comment | Header bsp | Definition bsp)
   def _Element
 
     _save = self.pos
     while true # choice
+      _tmp = apply(:_Comment)
+      break if _tmp
+      self.pos = _save
 
       _save1 = self.pos
       while true # sequence
@@ -1647,7 +1936,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # Enum = "enum" - tok_identifier "{" EnumDefList "}"
+  # Enum = "enum" - tok_identifier osp "{" obsp EnumDefList:vals obsp "}" {enum(vals)}
   def _Enum
 
     _save = self.pos
@@ -1667,17 +1956,39 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
       _tmp = match_string("{")
       unless _tmp
         self.pos = _save
         break
       end
+      _tmp = apply(:_obsp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
       _tmp = apply(:_EnumDefList)
+      vals = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_obsp)
       unless _tmp
         self.pos = _save
         break
       end
       _tmp = match_string("}")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; enum(vals); end
+      _tmp = true
       unless _tmp
         self.pos = _save
       end
@@ -1688,22 +1999,57 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # EnumDefList = EnumDefList EnumDef
+  # EnumDefList = (EnumDefList:l EnumDef:e { l + [e] } | EnumDef:e { [e] })
   def _EnumDefList
 
     _save = self.pos
-    while true # sequence
-      _tmp = apply(:_EnumDefList)
-      unless _tmp
-        self.pos = _save
+    while true # choice
+
+      _save1 = self.pos
+      while true # sequence
+        _tmp = apply(:_EnumDefList)
+        l = @result
+        unless _tmp
+          self.pos = _save1
+          break
+        end
+        _tmp = apply(:_EnumDef)
+        e = @result
+        unless _tmp
+          self.pos = _save1
+          break
+        end
+        @result = begin;  l + [e] ; end
+        _tmp = true
+        unless _tmp
+          self.pos = _save1
+        end
         break
-      end
-      _tmp = apply(:_EnumDef)
-      unless _tmp
-        self.pos = _save
-      end
+      end # end sequence
+
+      break if _tmp
+      self.pos = _save
+
+      _save2 = self.pos
+      while true # sequence
+        _tmp = apply(:_EnumDef)
+        e = @result
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        @result = begin;  [e] ; end
+        _tmp = true
+        unless _tmp
+          self.pos = _save2
+        end
+        break
+      end # end sequence
+
+      break if _tmp
+      self.pos = _save
       break
-    end # end sequence
+    end # end choice
 
     set_failed_rule :_EnumDefList unless _tmp
     return _tmp
@@ -1915,27 +2261,91 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # ConstValue = (tok_int_constant | tok_dub_constant | tok_literal | tok_identifier | ConstList | ConstMap)
+  # ConstValue = (tok_int_constant:i {const_int(i)} | tok_literal:s {const_str(s)} | tok_identifier:i {const_id(i)} | ConstList | ConstMap | tok_dub_constant:d {const_dbl(d)})
   def _ConstValue
 
     _save = self.pos
     while true # choice
-      _tmp = apply(:_tok_int_constant)
+
+      _save1 = self.pos
+      while true # sequence
+        _tmp = apply(:_tok_int_constant)
+        i = @result
+        unless _tmp
+          self.pos = _save1
+          break
+        end
+        @result = begin; const_int(i); end
+        _tmp = true
+        unless _tmp
+          self.pos = _save1
+        end
+        break
+      end # end sequence
+
       break if _tmp
       self.pos = _save
-      _tmp = apply(:_tok_dub_constant)
+
+      _save2 = self.pos
+      while true # sequence
+        _tmp = apply(:_tok_literal)
+        s = @result
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        @result = begin; const_str(s); end
+        _tmp = true
+        unless _tmp
+          self.pos = _save2
+        end
+        break
+      end # end sequence
+
       break if _tmp
       self.pos = _save
-      _tmp = apply(:_tok_literal)
-      break if _tmp
-      self.pos = _save
-      _tmp = apply(:_tok_identifier)
+
+      _save3 = self.pos
+      while true # sequence
+        _tmp = apply(:_tok_identifier)
+        i = @result
+        unless _tmp
+          self.pos = _save3
+          break
+        end
+        @result = begin; const_id(i); end
+        _tmp = true
+        unless _tmp
+          self.pos = _save3
+        end
+        break
+      end # end sequence
+
       break if _tmp
       self.pos = _save
       _tmp = apply(:_ConstList)
       break if _tmp
       self.pos = _save
       _tmp = apply(:_ConstMap)
+      break if _tmp
+      self.pos = _save
+
+      _save4 = self.pos
+      while true # sequence
+        _tmp = apply(:_tok_dub_constant)
+        d = @result
+        unless _tmp
+          self.pos = _save4
+          break
+        end
+        @result = begin; const_dbl(d); end
+        _tmp = true
+        unless _tmp
+          self.pos = _save4
+        end
+        break
+      end # end sequence
+
       break if _tmp
       self.pos = _save
       break
@@ -1945,7 +2355,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # ConstList = "[" ConstListContents "]"
+  # ConstList = "[" osp ConstListContents*:l osp "]" {const_list(l)}
   def _ConstList
 
     _save = self.pos
@@ -1955,12 +2365,36 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
-      _tmp = apply(:_ConstListContents)
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _ary = []
+      while true
+        _tmp = apply(:_ConstListContents)
+        _ary << @result if _tmp
+        break unless _tmp
+      end
+      _tmp = true
+      @result = _ary
+      l = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
       unless _tmp
         self.pos = _save
         break
       end
       _tmp = match_string("]")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; const_list(l); end
+      _tmp = true
       unless _tmp
         self.pos = _save
       end
@@ -1971,114 +2405,182 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # ConstListContents = (ConstListContents ConstValue CommaOrSemicolonOptional | nothing)
+  # ConstListContents = ConstValue:i CommaOrSemicolonOptional osp {i}
   def _ConstListContents
 
     _save = self.pos
-    while true # choice
-
-      _save1 = self.pos
-      while true # sequence
-        _tmp = apply(:_ConstListContents)
-        unless _tmp
-          self.pos = _save1
-          break
-        end
-        _tmp = apply(:_ConstValue)
-        unless _tmp
-          self.pos = _save1
-          break
-        end
-        _tmp = apply(:_CommaOrSemicolonOptional)
-        unless _tmp
-          self.pos = _save1
-        end
+    while true # sequence
+      _tmp = apply(:_ConstValue)
+      i = @result
+      unless _tmp
+        self.pos = _save
         break
-      end # end sequence
-
-      break if _tmp
-      self.pos = _save
-      _tmp = apply(:_nothing)
-      break if _tmp
-      self.pos = _save
+      end
+      _tmp = apply(:_CommaOrSemicolonOptional)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; i; end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
       break
-    end # end choice
+    end # end sequence
 
     set_failed_rule :_ConstListContents unless _tmp
     return _tmp
   end
 
-  # ConstMapContents = (ConstMapContents ConstValue ":" ConstValue CommaOrSemicolonOptional | nothing)
+  # ConstMap = "{" osp ConstMapContents*:m osp "}" {const_map(m)}
+  def _ConstMap
+
+    _save = self.pos
+    while true # sequence
+      _tmp = match_string("{")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _ary = []
+      while true
+        _tmp = apply(:_ConstMapContents)
+        _ary << @result if _tmp
+        break unless _tmp
+      end
+      _tmp = true
+      @result = _ary
+      m = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = match_string("}")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; const_map(m); end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
+    set_failed_rule :_ConstMap unless _tmp
+    return _tmp
+  end
+
+  # ConstMapContents = ConstValue:k osp ":" osp ConstValue:v CommaOrSemicolonOptional { [k,v] }
   def _ConstMapContents
 
     _save = self.pos
-    while true # choice
-
-      _save1 = self.pos
-      while true # sequence
-        _tmp = apply(:_ConstMapContents)
-        unless _tmp
-          self.pos = _save1
-          break
-        end
-        _tmp = apply(:_ConstValue)
-        unless _tmp
-          self.pos = _save1
-          break
-        end
-        _tmp = match_string(":")
-        unless _tmp
-          self.pos = _save1
-          break
-        end
-        _tmp = apply(:_ConstValue)
-        unless _tmp
-          self.pos = _save1
-          break
-        end
-        _tmp = apply(:_CommaOrSemicolonOptional)
-        unless _tmp
-          self.pos = _save1
-        end
+    while true # sequence
+      _tmp = apply(:_ConstValue)
+      k = @result
+      unless _tmp
+        self.pos = _save
         break
-      end # end sequence
-
-      break if _tmp
-      self.pos = _save
-      _tmp = apply(:_nothing)
-      break if _tmp
-      self.pos = _save
+      end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = match_string(":")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_ConstValue)
+      v = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_CommaOrSemicolonOptional)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin;  [k,v] ; end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
       break
-    end # end choice
+    end # end sequence
 
     set_failed_rule :_ConstMapContents unless _tmp
     return _tmp
   end
 
-  # StructHead = ("struct" | "union")
+  # StructHead = < ("struct" | "union") > {text}
   def _StructHead
 
     _save = self.pos
-    while true # choice
-      _tmp = match_string("struct")
-      break if _tmp
-      self.pos = _save
-      _tmp = match_string("union")
-      break if _tmp
-      self.pos = _save
+    while true # sequence
+      _text_start = self.pos
+
+      _save1 = self.pos
+      while true # choice
+        _tmp = match_string("struct")
+        break if _tmp
+        self.pos = _save1
+        _tmp = match_string("union")
+        break if _tmp
+        self.pos = _save1
+        break
+      end # end choice
+
+      if _tmp
+        text = get_text(_text_start)
+      end
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; text; end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
       break
-    end # end choice
+    end # end sequence
 
     set_failed_rule :_StructHead unless _tmp
     return _tmp
   end
 
-  # Struct = StructHead - tok_identifier:name - XsdAll? osp "{" obsp FieldList?:list obsp "}" {struct(name,list)}
+  # Struct = StructHead:t - tok_identifier:name - XsdAll? osp "{" obsp Comment? FieldList?:list obsp "}" {struct(t.to_sym,name,list)}
   def _Struct
 
     _save = self.pos
     while true # sequence
       _tmp = apply(:_StructHead)
+      t = @result
       unless _tmp
         self.pos = _save
         break
@@ -2125,11 +2627,21 @@ class ThriftOptz::Parser
         break
       end
       _save2 = self.pos
+      _tmp = apply(:_Comment)
+      unless _tmp
+        _tmp = true
+        self.pos = _save2
+      end
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _save3 = self.pos
       _tmp = apply(:_FieldList)
       @result = nil unless _tmp
       unless _tmp
         _tmp = true
-        self.pos = _save2
+        self.pos = _save3
       end
       list = @result
       unless _tmp
@@ -2146,7 +2658,7 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
-      @result = begin; struct(name,list); end
+      @result = begin; struct(t.to_sym,name,list); end
       _tmp = true
       unless _tmp
         self.pos = _save
@@ -2276,7 +2788,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # Xception = "exception" - tok_identifier "{" FieldList "}"
+  # Xception = "exception" - tok_identifier:name osp "{" obsp FieldList?:list obsp "}" {exception(name, list)}
   def _Xception
 
     _save = self.pos
@@ -2292,6 +2804,12 @@ class ThriftOptz::Parser
         break
       end
       _tmp = apply(:_tok_identifier)
+      name = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
       unless _tmp
         self.pos = _save
         break
@@ -2301,12 +2819,35 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
+      _tmp = apply(:_obsp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _save1 = self.pos
       _tmp = apply(:_FieldList)
+      @result = nil unless _tmp
+      unless _tmp
+        _tmp = true
+        self.pos = _save1
+      end
+      list = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_obsp)
       unless _tmp
         self.pos = _save
         break
       end
       _tmp = match_string("}")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; exception(name, list); end
+      _tmp = true
       unless _tmp
         self.pos = _save
       end
@@ -2484,7 +3025,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # Function = CaptureDocText OneWay? FunctionType:rt - tok_identifier:name osp "(" FieldList:args ")" Throws? CommaOrSemicolonOptional {function(name, rt, args)}
+  # Function = CaptureDocText OneWay? FunctionType:rt - tok_identifier:name osp "(" FieldList?:args ")" Throws? CommaOrSemicolonOptional {function(name, rt, args)}
   def _Function
 
     _save = self.pos
@@ -2531,7 +3072,13 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
+      _save2 = self.pos
       _tmp = apply(:_FieldList)
+      @result = nil unless _tmp
+      unless _tmp
+        _tmp = true
+        self.pos = _save2
+      end
       args = @result
       unless _tmp
         self.pos = _save
@@ -2542,11 +3089,11 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
-      _save2 = self.pos
+      _save3 = self.pos
       _tmp = apply(:_Throws)
       unless _tmp
         _tmp = true
-        self.pos = _save2
+        self.pos = _save3
       end
       unless _tmp
         self.pos = _save
@@ -2569,19 +3116,33 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # OneWay = ("oneway" | "async")
+  # OneWay = ("oneway" | "async") -
   def _OneWay
 
     _save = self.pos
-    while true # choice
-      _tmp = match_string("oneway")
-      break if _tmp
-      self.pos = _save
-      _tmp = match_string("async")
-      break if _tmp
-      self.pos = _save
+    while true # sequence
+
+      _save1 = self.pos
+      while true # choice
+        _tmp = match_string("oneway")
+        break if _tmp
+        self.pos = _save1
+        _tmp = match_string("async")
+        break if _tmp
+        self.pos = _save1
+        break
+      end # end choice
+
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:__hyphen_)
+      unless _tmp
+        self.pos = _save
+      end
       break
-    end # end choice
+    end # end sequence
 
     set_failed_rule :_OneWay unless _tmp
     return _tmp
@@ -2679,7 +3240,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # Field = CaptureDocText FieldIdentifier?:i osp FieldRequiredness osp FieldType:t osp tok_identifier:n osp FieldValue CommaOrSemicolonOptional {field(i,t,n)}
+  # Field = CaptureDocText FieldIdentifier?:i osp FieldRequiredness?:req osp FieldType:t osp tok_identifier:n osp FieldValue?:val CommaOrSemicolonOptional {field(i,t,n,val,req)}
   def _Field
 
     _save = self.pos
@@ -2706,7 +3267,14 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
+      _save2 = self.pos
       _tmp = apply(:_FieldRequiredness)
+      @result = nil unless _tmp
+      unless _tmp
+        _tmp = true
+        self.pos = _save2
+      end
+      req = @result
       unless _tmp
         self.pos = _save
         break
@@ -2738,7 +3306,14 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
+      _save3 = self.pos
       _tmp = apply(:_FieldValue)
+      @result = nil unless _tmp
+      unless _tmp
+        _tmp = true
+        self.pos = _save3
+      end
+      val = @result
       unless _tmp
         self.pos = _save
         break
@@ -2748,7 +3323,7 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
-      @result = begin; field(i,t,n); end
+      @result = begin; field(i,t,n,val,req); end
       _tmp = true
       unless _tmp
         self.pos = _save
@@ -2788,51 +3363,72 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # FieldRequiredness = ("required" | "optional")?
+  # FieldRequiredness = < ("required" | "optional") > { [text] }
   def _FieldRequiredness
+
     _save = self.pos
-
-    _save1 = self.pos
-    while true # choice
-      _tmp = match_string("required")
-      break if _tmp
-      self.pos = _save1
-      _tmp = match_string("optional")
-      break if _tmp
-      self.pos = _save1
-      break
-    end # end choice
-
-    unless _tmp
-      _tmp = true
-      self.pos = _save
-    end
-    set_failed_rule :_FieldRequiredness unless _tmp
-    return _tmp
-  end
-
-  # FieldValue = ("=" ConstValue)?
-  def _FieldValue
-    _save = self.pos
-
-    _save1 = self.pos
     while true # sequence
-      _tmp = match_string("=")
-      unless _tmp
+      _text_start = self.pos
+
+      _save1 = self.pos
+      while true # choice
+        _tmp = match_string("required")
+        break if _tmp
+        self.pos = _save1
+        _tmp = match_string("optional")
+        break if _tmp
         self.pos = _save1
         break
+      end # end choice
+
+      if _tmp
+        text = get_text(_text_start)
       end
-      _tmp = apply(:_ConstValue)
       unless _tmp
-        self.pos = _save1
+        self.pos = _save
+        break
+      end
+      @result = begin;  [text] ; end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
       end
       break
     end # end sequence
 
-    unless _tmp
+    set_failed_rule :_FieldRequiredness unless _tmp
+    return _tmp
+  end
+
+  # FieldValue = "=" osp ConstValue:e {e}
+  def _FieldValue
+
+    _save = self.pos
+    while true # sequence
+      _tmp = match_string("=")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_ConstValue)
+      e = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; e; end
       _tmp = true
-      self.pos = _save
-    end
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
     set_failed_rule :_FieldValue unless _tmp
     return _tmp
   end
@@ -2855,11 +3451,14 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # FieldType = (tok_identifier:n {n} | BaseType | ContainerType)
+  # FieldType = (ContainerType | tok_identifier:n {n})
   def _FieldType
 
     _save = self.pos
     while true # choice
+      _tmp = apply(:_ContainerType)
+      break if _tmp
+      self.pos = _save
 
       _save1 = self.pos
       while true # sequence
@@ -2877,12 +3476,6 @@ class ThriftOptz::Parser
         break
       end # end sequence
 
-      break if _tmp
-      self.pos = _save
-      _tmp = apply(:_BaseType)
-      break if _tmp
-      self.pos = _save
-      _tmp = apply(:_ContainerType)
       break if _tmp
       self.pos = _save
       break
@@ -3094,23 +3687,9 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # ContainerType = SimpleContainerType TypeAnnotations
+  # ContainerType = SimpleContainerType
   def _ContainerType
-
-    _save = self.pos
-    while true # sequence
-      _tmp = apply(:_SimpleContainerType)
-      unless _tmp
-        self.pos = _save
-        break
-      end
-      _tmp = apply(:_TypeAnnotations)
-      unless _tmp
-        self.pos = _save
-      end
-      break
-    end # end sequence
-
+    _tmp = apply(:_SimpleContainerType)
     set_failed_rule :_ContainerType unless _tmp
     return _tmp
   end
@@ -3136,22 +3715,12 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # MapType = "map" - CppType "<" FieldType "," FieldType ">"
+  # MapType = "map" "<" FieldType:a osp "," osp FieldType:b ">" {map(a,b)}
   def _MapType
 
     _save = self.pos
     while true # sequence
       _tmp = match_string("map")
-      unless _tmp
-        self.pos = _save
-        break
-      end
-      _tmp = apply(:__hyphen_)
-      unless _tmp
-        self.pos = _save
-        break
-      end
-      _tmp = apply(:_CppType)
       unless _tmp
         self.pos = _save
         break
@@ -3162,6 +3731,12 @@ class ThriftOptz::Parser
         break
       end
       _tmp = apply(:_FieldType)
+      a = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
       unless _tmp
         self.pos = _save
         break
@@ -3171,12 +3746,24 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
       _tmp = apply(:_FieldType)
+      b = @result
       unless _tmp
         self.pos = _save
         break
       end
       _tmp = match_string(">")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; map(a,b); end
+      _tmp = true
       unless _tmp
         self.pos = _save
       end
@@ -3187,17 +3774,12 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # SetType = "set" CppType "<" FieldType ">"
+  # SetType = "set" "<" FieldType:a ">" {set(a)}
   def _SetType
 
     _save = self.pos
     while true # sequence
       _tmp = match_string("set")
-      unless _tmp
-        self.pos = _save
-        break
-      end
-      _tmp = apply(:_CppType)
       unless _tmp
         self.pos = _save
         break
@@ -3208,11 +3790,18 @@ class ThriftOptz::Parser
         break
       end
       _tmp = apply(:_FieldType)
+      a = @result
       unless _tmp
         self.pos = _save
         break
       end
       _tmp = match_string(">")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; set(a); end
+      _tmp = true
       unless _tmp
         self.pos = _save
       end
@@ -3223,7 +3812,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # ListType = "list" "<" FieldType ">" CppType
+  # ListType = "list" "<" FieldType:a ">" {list(a)}
   def _ListType
 
     _save = self.pos
@@ -3239,6 +3828,7 @@ class ThriftOptz::Parser
         break
       end
       _tmp = apply(:_FieldType)
+      a = @result
       unless _tmp
         self.pos = _save
         break
@@ -3248,7 +3838,8 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
-      _tmp = apply(:_CppType)
+      @result = begin; list(a); end
+      _tmp = true
       unless _tmp
         self.pos = _save
       end
@@ -3346,7 +3937,7 @@ class ThriftOptz::Parser
   Rules = {}
   Rules[:_intconstant] = rule_info("intconstant", "/([+-]?[0-9]+)/")
   Rules[:_hexconstant] = rule_info("hexconstant", "/(\"0x\"[0-9A-Fa-f]+)/")
-  Rules[:_dubconstant] = rule_info("dubconstant", "/([+-]?[0-9]*(\\.[0-9]+)?([eE][+-]?[0-9]+)?)/")
+  Rules[:_dubconstant] = rule_info("dubconstant", "(/([+-]?[0-9]+(\\.[0-9]+)([eE][+-]?[0-9]+)?)/ | /([+-]?[0-9]+([eE][+-]?[0-9]+))/ | /([+-]?(\\.[0-9]+)([eE][+-]?[0-9]+)?)/)")
   Rules[:_identifier] = rule_info("identifier", "/([a-zA-Z_][\\.a-zA-Z_0-9]*)/")
   Rules[:_whitespace] = rule_info("whitespace", "/([ \\t\\r\\n]*)/")
   Rules[:_st_identifier] = rule_info("st_identifier", "/([a-zA-Z-][\\.a-zA-Z_0-9-]*)/")
@@ -3357,17 +3948,20 @@ class ThriftOptz::Parser
   Rules[:_tok_identifier] = rule_info("tok_identifier", "< identifier > {text}")
   Rules[:_tok_st_identifier] = rule_info("tok_st_identifier", "st_identifier")
   Rules[:_escapes] = rule_info("escapes", "(\"\\\\r\" { \"\\r\" } | \"\\\\n\" { \"\\n\" } | \"\\\\t\" { \"\\t\" } | \"\\\\\\\"\" { \"\\\"\" } | \"\\\\'\" { \"'\" } | \"\\\\\\\\\" { \"\\\\\" })")
-  Rules[:_tok_literal] = rule_info("tok_literal", "(\"\\\"\" (escapes | !\"\\\"\" .)*:c \"\\\"\" { c.join } | \"'\" (escapes | !\"'\" .)*:c \"'\" { c.join })")
-  Rules[:__hyphen_] = rule_info("-", "/[\\s\\t]+/")
-  Rules[:_osp] = rule_info("osp", "/[\\s\\t]*/")
-  Rules[:_bsp] = rule_info("bsp", "/[\\s\\t\\n]+/")
-  Rules[:_obsp] = rule_info("obsp", "/[\\s\\t\\n]*/")
-  Rules[:_root] = rule_info("root", "Program")
+  Rules[:_tok_literal] = rule_info("tok_literal", "(\"\\\"\" < (escapes | !\"\\\"\" .)* > \"\\\"\" {text} | \"'\" < (escapes | !\"'\" .)* > \"'\" {text})")
+  Rules[:__hyphen_] = rule_info("-", "/[ \\t]+/")
+  Rules[:_osp] = rule_info("osp", "/[ \\t]*/")
+  Rules[:_bsp] = rule_info("bsp", "/[\\s]+/")
+  Rules[:_obsp] = rule_info("obsp", "/[\\s]*/")
+  Rules[:_root] = rule_info("root", "Program !.")
   Rules[:_Program] = rule_info("Program", "Element*:a { a }")
+  Rules[:_CComment] = rule_info("CComment", "\"/*\" < (!\"*/\" .)* > \"*/\" obsp {comment(text)}")
+  Rules[:_HComment] = rule_info("HComment", "\"\#\" < (!\"\\n\" .)* > bsp {comment(text)}")
+  Rules[:_Comment] = rule_info("Comment", "(CComment | HComment)")
   Rules[:_CaptureDocText] = rule_info("CaptureDocText", "{}")
   Rules[:_DestroyDocText] = rule_info("DestroyDocText", "{}")
   Rules[:_HeaderList] = rule_info("HeaderList", "(HeaderList Header | Header)")
-  Rules[:_Element] = rule_info("Element", "(Header bsp | Definition bsp)")
+  Rules[:_Element] = rule_info("Element", "(Comment | Header bsp | Definition bsp)")
   Rules[:_Header] = rule_info("Header", "(Include | Namespace)")
   Rules[:_Namespace] = rule_info("Namespace", "(\"namespace\" - tok_identifier:l - tok_identifier:n {namespace(l,n)} | \"namespace\" - \"*\" - tok_identifier:n {namespace(nil,n)})")
   Rules[:_Include] = rule_info("Include", "\"include\" - tok_literal:f {include(f)}")
@@ -3376,44 +3970,45 @@ class ThriftOptz::Parser
   Rules[:_TypeDefinition] = rule_info("TypeDefinition", "(Typedef | Enum | Senum | Struct | Xception)")
   Rules[:_Typedef] = rule_info("Typedef", "\"typedef\" - FieldType tok_identifier")
   Rules[:_CommaOrSemicolonOptional] = rule_info("CommaOrSemicolonOptional", "(\",\" | \";\")? obsp")
-  Rules[:_Enum] = rule_info("Enum", "\"enum\" - tok_identifier \"{\" EnumDefList \"}\"")
-  Rules[:_EnumDefList] = rule_info("EnumDefList", "EnumDefList EnumDef")
+  Rules[:_Enum] = rule_info("Enum", "\"enum\" - tok_identifier osp \"{\" obsp EnumDefList:vals obsp \"}\" {enum(vals)}")
+  Rules[:_EnumDefList] = rule_info("EnumDefList", "(EnumDefList:l EnumDef:e { l + [e] } | EnumDef:e { [e] })")
   Rules[:_EnumDef] = rule_info("EnumDef", "(CaptureDocText tok_identifier \"=\" tok_int_constant CommaOrSemicolonOptional | CaptureDocText tok_identifier CommaOrSemicolonOptional)")
   Rules[:_Senum] = rule_info("Senum", "\"senum\" - tok_identifier \"{\" SenumDefList \"}\"")
   Rules[:_SenumDefList] = rule_info("SenumDefList", "(SenumDefList SenumDef | nothing)")
   Rules[:_SenumDef] = rule_info("SenumDef", "tok_literal CommaOrSemicolonOptional")
   Rules[:_Const] = rule_info("Const", "\"const\" - FieldType tok_identifier \"=\" ConstValue CommaOrSemicolonOptional")
-  Rules[:_ConstValue] = rule_info("ConstValue", "(tok_int_constant | tok_dub_constant | tok_literal | tok_identifier | ConstList | ConstMap)")
-  Rules[:_ConstList] = rule_info("ConstList", "\"[\" ConstListContents \"]\"")
-  Rules[:_ConstListContents] = rule_info("ConstListContents", "(ConstListContents ConstValue CommaOrSemicolonOptional | nothing)")
-  Rules[:_ConstMapContents] = rule_info("ConstMapContents", "(ConstMapContents ConstValue \":\" ConstValue CommaOrSemicolonOptional | nothing)")
-  Rules[:_StructHead] = rule_info("StructHead", "(\"struct\" | \"union\")")
-  Rules[:_Struct] = rule_info("Struct", "StructHead - tok_identifier:name - XsdAll? osp \"{\" obsp FieldList?:list obsp \"}\" {struct(name,list)}")
+  Rules[:_ConstValue] = rule_info("ConstValue", "(tok_int_constant:i {const_int(i)} | tok_literal:s {const_str(s)} | tok_identifier:i {const_id(i)} | ConstList | ConstMap | tok_dub_constant:d {const_dbl(d)})")
+  Rules[:_ConstList] = rule_info("ConstList", "\"[\" osp ConstListContents*:l osp \"]\" {const_list(l)}")
+  Rules[:_ConstListContents] = rule_info("ConstListContents", "ConstValue:i CommaOrSemicolonOptional osp {i}")
+  Rules[:_ConstMap] = rule_info("ConstMap", "\"{\" osp ConstMapContents*:m osp \"}\" {const_map(m)}")
+  Rules[:_ConstMapContents] = rule_info("ConstMapContents", "ConstValue:k osp \":\" osp ConstValue:v CommaOrSemicolonOptional { [k,v] }")
+  Rules[:_StructHead] = rule_info("StructHead", "< (\"struct\" | \"union\") > {text}")
+  Rules[:_Struct] = rule_info("Struct", "StructHead:t - tok_identifier:name - XsdAll? osp \"{\" obsp Comment? FieldList?:list obsp \"}\" {struct(t.to_sym,name,list)}")
   Rules[:_XsdAll] = rule_info("XsdAll", "\"xsd_all\"")
   Rules[:_XsdOptional] = rule_info("XsdOptional", "(\"xsd_optional\" - | nothing)")
   Rules[:_XsdNillable] = rule_info("XsdNillable", "(\"xsd_nillable\" - | nothing)")
   Rules[:_XsdAttributes] = rule_info("XsdAttributes", "(\"xsd_attrs\" - \"{\" FieldList \"}\" | nothing)")
-  Rules[:_Xception] = rule_info("Xception", "\"exception\" - tok_identifier \"{\" FieldList \"}\"")
+  Rules[:_Xception] = rule_info("Xception", "\"exception\" - tok_identifier:name osp \"{\" obsp FieldList?:list obsp \"}\" {exception(name, list)}")
   Rules[:_Service] = rule_info("Service", "\"service\" - tok_identifier:name - Extends? osp \"{\" obsp FunctionList?:funcs obsp \"}\" {service(name, funcs)}")
   Rules[:_Extends] = rule_info("Extends", "\"extends\" - tok_identifier")
   Rules[:_FunctionList] = rule_info("FunctionList", "(FunctionList:l Function:f { l + [f] } | Function:f { [f] })")
-  Rules[:_Function] = rule_info("Function", "CaptureDocText OneWay? FunctionType:rt - tok_identifier:name osp \"(\" FieldList:args \")\" Throws? CommaOrSemicolonOptional {function(name, rt, args)}")
-  Rules[:_OneWay] = rule_info("OneWay", "(\"oneway\" | \"async\")")
+  Rules[:_Function] = rule_info("Function", "CaptureDocText OneWay? FunctionType:rt - tok_identifier:name osp \"(\" FieldList?:args \")\" Throws? CommaOrSemicolonOptional {function(name, rt, args)}")
+  Rules[:_OneWay] = rule_info("OneWay", "(\"oneway\" | \"async\") -")
   Rules[:_Throws] = rule_info("Throws", "\"throws\" - \"(\" FieldList \")\"")
   Rules[:_FieldList] = rule_info("FieldList", "(FieldList:l Field:f { l + [f] } | Field:f { [f] })")
-  Rules[:_Field] = rule_info("Field", "CaptureDocText FieldIdentifier?:i osp FieldRequiredness osp FieldType:t osp tok_identifier:n osp FieldValue CommaOrSemicolonOptional {field(i,t,n)}")
+  Rules[:_Field] = rule_info("Field", "CaptureDocText FieldIdentifier?:i osp FieldRequiredness?:req osp FieldType:t osp tok_identifier:n osp FieldValue?:val CommaOrSemicolonOptional {field(i,t,n,val,req)}")
   Rules[:_FieldIdentifier] = rule_info("FieldIdentifier", "tok_int_constant:n \":\" {n}")
-  Rules[:_FieldRequiredness] = rule_info("FieldRequiredness", "(\"required\" | \"optional\")?")
-  Rules[:_FieldValue] = rule_info("FieldValue", "(\"=\" ConstValue)?")
+  Rules[:_FieldRequiredness] = rule_info("FieldRequiredness", "< (\"required\" | \"optional\") > { [text] }")
+  Rules[:_FieldValue] = rule_info("FieldValue", "\"=\" osp ConstValue:e {e}")
   Rules[:_FunctionType] = rule_info("FunctionType", "(FieldType | \"void\")")
-  Rules[:_FieldType] = rule_info("FieldType", "(tok_identifier:n {n} | BaseType | ContainerType)")
+  Rules[:_FieldType] = rule_info("FieldType", "(ContainerType | tok_identifier:n {n})")
   Rules[:_BaseType] = rule_info("BaseType", "SimpleBaseType:t TypeAnnotations {t}")
   Rules[:_SimpleBaseType] = rule_info("SimpleBaseType", "(\"string\" { :string } | \"binary\" { :binary } | \"slist\" { :slist } | \"bool\" { :bool } | \"byte\" { :byte } | \"i16\" { :i16 } | \"i32\" { :i32 } | \"i64\" { :i64 } | \"double\" { :double })")
-  Rules[:_ContainerType] = rule_info("ContainerType", "SimpleContainerType TypeAnnotations")
+  Rules[:_ContainerType] = rule_info("ContainerType", "SimpleContainerType")
   Rules[:_SimpleContainerType] = rule_info("SimpleContainerType", "(MapType | SetType | ListType)")
-  Rules[:_MapType] = rule_info("MapType", "\"map\" - CppType \"<\" FieldType \",\" FieldType \">\"")
-  Rules[:_SetType] = rule_info("SetType", "\"set\" CppType \"<\" FieldType \">\"")
-  Rules[:_ListType] = rule_info("ListType", "\"list\" \"<\" FieldType \">\" CppType")
+  Rules[:_MapType] = rule_info("MapType", "\"map\" \"<\" FieldType:a osp \",\" osp FieldType:b \">\" {map(a,b)}")
+  Rules[:_SetType] = rule_info("SetType", "\"set\" \"<\" FieldType:a \">\" {set(a)}")
+  Rules[:_ListType] = rule_info("ListType", "\"list\" \"<\" FieldType:a \">\" {list(a)}")
   Rules[:_CppType] = rule_info("CppType", "(tok_cpp_type tok_literal | nothing)")
   Rules[:_TypeAnnotationList] = rule_info("TypeAnnotationList", "TypeAnnotationList TypeAnnotation")
   Rules[:_TypeAnnotation] = rule_info("TypeAnnotation", "tok_identifier \"=\" tok_literal CommaOrSemicolonOptional")

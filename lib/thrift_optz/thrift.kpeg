@@ -1,15 +1,30 @@
-%% name = GlassParser
+%% name = ThriftOptz::Parser
 
 %% namespace = ast Namespace(lang, namespace)
 %% include = ast Include(path)
-%% struct = ast Struct(name, fields)
-%% field = ast Field(index, type, name)
+%% struct = ast Struct(type, name, fields)
+%% field = ast Field(index, type, name, value, options)
 %% function = ast Function(name, return_type, arguments)
 %% service = ast Service(name, functions)
+%% comment = ast Comment(text)
+%% enum = ast Enum(values)
+%% map = ast Map(key,value)
+%% set = ast Set(value)
+%% list = ast List(value)
+%% exception = ast Exception(name, fields)
+%% const_int = ast ConstInt(value)
+%% const_str = ast ConstString(value)
+%% const_id  = ast ConstIdentifier(value)
+%% const_list = ast ConstList(values)
+%% const_map = ast ConstMap(values)
+%% const_dbl = ast ConstDouble(value)
 
 intconstant   = /([+-]?[0-9]+)/
 hexconstant   = /("0x"[0-9A-Fa-f]+)/
-dubconstant   = /([+-]?[0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?)/
+dubconstant   = /([+-]?[0-9]+(\.[0-9]+)([eE][+-]?[0-9]+)?)/
+              | /([+-]?[0-9]+([eE][+-]?[0-9]+))/
+              | /([+-]?(\.[0-9]+)([eE][+-]?[0-9]+)?)/
+              # | /([+-]?[0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?)/
 identifier    = /([a-zA-Z_][\.a-zA-Z_0-9]*)/
 whitespace    = /([ \t\r\n]*)/
 # sillycomm     = /("\/*""*"*"*\/")/
@@ -143,26 +158,33 @@ escapes = "\\r"  { "\r" }
          | "\\'"   { "'" }
          | "\\\\" { "\\" }
 
-tok_literal = "\"" (escapes | !"\"" . )*:c "\"" { c.join }
-            | "'"  (escapes | !"'" .  )*:c "'"  { c.join }
+tok_literal = "\"" < (escapes | !"\"" . )* > "\"" ~text
+            | "'"  < (escapes | !"'" .  )* > "'"  ~text
 
-- = /[\s\t]+/
-osp = /[\s\t]*/
-bsp = /[\s\t\n]+/
-obsp = /[\s\t\n]*/
+- = /[ \t]+/
+osp = /[ \t]*/
+bsp = /[\s]+/
+obsp = /[\s]*/
 
-root = Program
+root = Program !.
 
 # Program = HeaderList - DefinitionList
 
 Program = Element*:a { a }
+
+CComment = "/*" < (!"*/" .)* > "*/" obsp ~comment(text)
+
+HComment = "#" <  (!"\n" .)* > bsp ~comment(text)
+
+Comment = CComment | HComment
 
 CaptureDocText = {}
 DestroyDocText = {}
 HeaderList = HeaderList Header
            | Header
 
-Element = Header bsp
+Element = Comment
+        | Header bsp
         | Definition bsp
 
 Header = Include | Namespace
@@ -188,9 +210,10 @@ Typedef = "typedef" - FieldType tok_identifier
 
 CommaOrSemicolonOptional = ("," | ";")? obsp
 
-Enum = "enum" - tok_identifier "{" EnumDefList "}"
+Enum = "enum" - tok_identifier osp "{" obsp EnumDefList:vals obsp "}" ~enum(vals)
 
-EnumDefList = EnumDefList EnumDef
+EnumDefList = EnumDefList:l EnumDef:e { l + [e] }
+            | EnumDef:e { [e] }
 
 EnumDef = CaptureDocText tok_identifier "=" tok_int_constant CommaOrSemicolonOptional
         | CaptureDocText tok_identifier CommaOrSemicolonOptional
@@ -204,26 +227,29 @@ SenumDef = tok_literal CommaOrSemicolonOptional
 
 Const = "const" - FieldType tok_identifier "=" ConstValue CommaOrSemicolonOptional
 
-ConstValue = tok_int_constant
-           | tok_dub_constant
-           | tok_literal
-           | tok_identifier
+ConstValue = tok_int_constant:i ~const_int(i)
+           | tok_literal:s ~const_str(s)
+           | tok_identifier:i ~const_id(i)
            | ConstList
            | ConstMap
+           | tok_dub_constant:d ~const_dbl(d)
 
-ConstList = "[" ConstListContents "]"
+ConstList = "[" osp ConstListContents*:l osp "]" ~const_list(l)
 
-ConstListContents = ConstListContents ConstValue CommaOrSemicolonOptional
-                  | nothing
+ConstListContents = ConstValue:i CommaOrSemicolonOptional osp ~i
 
-ConstMapContents = ConstMapContents ConstValue ":" ConstValue CommaOrSemicolonOptional
-                 | nothing
+ConstMap = "{" osp ConstMapContents*:m osp "}" ~const_map(m)
 
-StructHead = "struct" | "union"
+# ConstMapContents = ConstMapContents ConstValue osp ":" osp ConstValue CommaOrSemicolonOptional
+                 # | ConstValue osp ":" osp ConstValue CommaOrSemicolonOptional
+ConstMapContents = ConstValue:k osp ":" osp ConstValue:v CommaOrSemicolonOptional
+                   { [k,v] }
 
-Struct = StructHead - tok_identifier:name - XsdAll? osp
-         "{" obsp FieldList?:list obsp "}" # TypeAnnotations
-         ~struct(name,list)
+StructHead = < "struct" | "union"> ~text
+
+Struct = StructHead:t - tok_identifier:name - XsdAll? osp
+         "{" obsp Comment? FieldList?:list obsp "}" # TypeAnnotations
+         ~struct(t.to_sym,name,list)
 
 XsdAll = "xsd_all"
 
@@ -234,7 +260,7 @@ XsdNillable = "xsd_nillable" - | nothing
 XsdAttributes = "xsd_attrs" - "{" FieldList "}"
               | nothing
 
-Xception = "exception" - tok_identifier "{" FieldList "}"
+Xception = "exception" - tok_identifier:name osp "{" obsp FieldList?:list obsp "}" ~exception(name, list)
 
 Service = "service" - tok_identifier:name - Extends? osp
           "{" obsp FunctionList?:funcs obsp "}"
@@ -246,33 +272,32 @@ FunctionList = FunctionList:l Function:f { l + [f] }
              | Function:f { [f] }
 
 Function = CaptureDocText OneWay? FunctionType:rt - tok_identifier:name
-           osp "(" FieldList:args ")" Throws? CommaOrSemicolonOptional
+           osp "(" FieldList?:args ")" Throws? CommaOrSemicolonOptional
            ~function(name, rt, args)
 
-OneWay = ("oneway" | "async" )
+OneWay = ("oneway" | "async") -
 
 Throws = "throws" - "(" FieldList ")"
 
 FieldList = FieldList:l Field:f { l + [f] }
           | Field:f { [f] }
 
-Field = CaptureDocText FieldIdentifier?:i osp FieldRequiredness osp
-        FieldType:t osp tok_identifier:n osp FieldValue
+Field = CaptureDocText FieldIdentifier?:i osp FieldRequiredness?:req osp
+        FieldType:t osp tok_identifier:n osp FieldValue?:val
         CommaOrSemicolonOptional
-        ~field(i,t,n)
+        ~field(i,t,n,val,req)
 
         # XsdOptional XsdNillable XsdAttributes TypeAnnotations
 FieldIdentifier = tok_int_constant:n ":" ~n
 
-FieldRequiredness = ("required" | "optional")?
+FieldRequiredness = < ("required" | "optional") > { [text] }
 
-FieldValue = ("=" ConstValue)?
+FieldValue = "=" osp ConstValue:e ~e
 
 FunctionType = FieldType | "void"
 
-FieldType = tok_identifier:n ~n
-          | BaseType
-          | ContainerType
+FieldType = ContainerType
+          | tok_identifier:n ~n
 
 BaseType = SimpleBaseType:t TypeAnnotations ~t
 
@@ -286,15 +311,15 @@ SimpleBaseType = "string" { :string }
                | "i64"    { :i64 }
                | "double" { :double }
 
-ContainerType = SimpleContainerType TypeAnnotations
+ContainerType = SimpleContainerType
 
 SimpleContainerType = MapType | SetType | ListType
 
-MapType = "map" - CppType "<" FieldType "," FieldType ">"
+MapType = "map" "<" FieldType:a osp "," osp FieldType:b ">" ~map(a,b)
 
-SetType = "set" CppType "<" FieldType ">"
+SetType = "set" "<" FieldType:a ">" ~set(a)
 
-ListType = "list" "<" FieldType ">" CppType
+ListType = "list" "<" FieldType:a ">" ~list(a)
 
 CppType = tok_cpp_type tok_literal
         | nothing

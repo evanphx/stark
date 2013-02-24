@@ -15,4 +15,10 @@ Hoe.spec 'thrift-optz' do
   developer('Evan Phoenix', 'evan@phx.io')
 end
 
+task :parser do
+  sh "kpeg -o lib/thrift_optz/raw_parser.rb -s -f lib/thrift_optz/thrift.kpeg"
+end
+
+task :test => :parser
+
 # vim: syntax=ruby
