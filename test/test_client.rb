@@ -139,7 +139,7 @@ class TestClient < Test::Unit::TestCase
     st.join
   end
 
-  def test_last_list_wrong_type
+  def test_last_list_is_nil
     st = Thread.new do
       @server.process @server_p, @server_p
     end

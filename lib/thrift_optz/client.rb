@@ -16,6 +16,18 @@ module ThriftOptz
 
     def handle_unexpected(rtype)
       return if rtype == ::Thrift::Types::STOP
+      @iprot.skip(rtype)
+    end
+
+    def handle_bad_list(rtype, size)
+      size.times { @iprot.skip(rtype) }
+    end
+
+    def handle_bad_map(key, value, size)
+      size.times do
+        @iprot.skip(key)
+        @iprot.skip(value)
+      end
     end
 
     def read_generic(type, id, cls)

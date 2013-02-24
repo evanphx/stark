@@ -8,9 +8,11 @@ module ThriftOptz
       info = self.class::Fields[idx]
       return unless info
 
-      return unless info.type == type
-
-      @fields[info.name] = info.read(ip)
+      if info.type == type
+        @fields[info.name] = info.read(ip)
+      else
+        ip.skip type
+      end
     end
 
     def method_missing(meth, *args)

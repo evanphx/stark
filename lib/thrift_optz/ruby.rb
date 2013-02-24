@@ -144,18 +144,6 @@ module ThriftOptz
       o "op.write_struct_end"
     end
 
-    def input_struct(desc)
-      o "ip.read_struct_begin"
-      o "while true"
-      o "  _, ftype, fid = iprot.read_field_begin"
-      o "  break if ftype == ::Thrift::Types::STOP"
-      o "  obj.set_from_index fid, "
-      o "  ip.read_field_end"
-      o "end"
-
-      o "ip.read_struct_end"
-    end
-
     def process_service(serv)
       o "module #{serv.name}"
       indent
@@ -227,30 +215,46 @@ module ThriftOptz
         o "handle_exception mtype"
 
         o "ip.read_struct_begin"
+        o "result = nil"
 
         if func.return_type == "void"
           o "_, rtype, _ = ip.read_field_begin"
-          o "result = nil"
         else
           if desc = @structs[func.return_type]
             o "_, rtype, rid = ip.read_field_begin"
-            o "result = read_generic rtype, rid, #{desc.name}"
+            o "if rtype != #{wire_type(func.return_type)}"
+            o "  handle_unexpected rtype"
+            o "else"
+            o "  result = read_generic rtype, rid, #{desc.name}"
+            o "end"
           elsif func.return_type.kind_of? ThriftOptz::Parser::AST::Map
             ft = func.return_type
 
             o "_, rtype, rid = ip.read_field_begin"
-            o "_, _, size = ip.read_map_begin"
-            o "result = {}"
-            o "size.times do"
-            o "  result[ip.#{read_func(ft.key)}] = ip.#{read_func(ft.value)}"
+            o "if rtype != #{wire_type(func.return_type)}"
+            o "  handle_unexpected rtype"
+            o "else"
+            o "  kt, vt, size = ip.read_map_begin"
+            o "  if kt == #{wire_type(ft.key)} && vt == #{wire_type(ft.value)}"
+            o "    result = {}"
+            o "    size.times do"
+            o "      result[ip.#{read_func(ft.key)}] = ip.#{read_func(ft.value)}"
+            o "    end"
+            o "  else"
+            o "    handle_bad_map size"
+            o "  end"
+            o "  ip.read_map_end"
             o "end"
-            o "ip.read_map_end"
           elsif func.return_type.kind_of? ThriftOptz::Parser::AST::List
             ft = func.return_type
             o "_, rtype, rid = ip.read_field_begin"
             o "if rtype == ::Thrift::Types::LIST"
-            o "  _, size = ip.read_list_begin"
-            o "  result = Array.new(size) { |n| ip.#{read_func(ft.value)} }"
+            o "  vt, size = ip.read_list_begin"
+            o "  if vt == #{wire_type(ft.value)}"
+            o "    result = Array.new(size) { |n| ip.#{read_func(ft.value)} }"
+            o "  else"
+            o "    handle_bad_list size"
+            o "  end"
             o "  ip.read_list_end"
             o "else"
             o "  handle_unexpected rtype"
@@ -259,6 +263,8 @@ module ThriftOptz
             o "_, rtype, _ = ip.read_field_begin"
             o "if rtype == #{type(func.return_type)}"
             o "  result = ip.#{read_func(func.return_type)}"
+            o "else"
+            o "  handle_unexpected rtype"
             o "end"
           end
 
