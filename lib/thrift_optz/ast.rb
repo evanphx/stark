@@ -37,5 +37,11 @@ class ThriftOptz::Parser
         obj.process_service self
       end
     end
+
+    class Enum
+      def accept(obj)
+        obj.process_enum self
+      end
+    end
   end
 end

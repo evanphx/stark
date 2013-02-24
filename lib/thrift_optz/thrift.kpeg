@@ -7,7 +7,7 @@
 %% function = ast Function(name, return_type, arguments)
 %% service = ast Service(name, functions)
 %% comment = ast Comment(text)
-%% enum = ast Enum(values)
+%% enum = ast Enum(name, values)
 %% map = ast Map(key,value)
 %% set = ast Set(value)
 %% list = ast List(value)
@@ -210,7 +210,7 @@ Typedef = "typedef" - FieldType tok_identifier
 
 CommaOrSemicolonOptional = ("," | ";")? obsp
 
-Enum = "enum" - tok_identifier osp "{" obsp EnumDefList:vals obsp "}" ~enum(vals)
+Enum = "enum" - tok_identifier:name osp "{" obsp EnumDefList:vals obsp "}" ~enum(name, vals)
 
 EnumDefList = EnumDefList:l EnumDef:e { l + [e] }
             | EnumDef:e { [e] }

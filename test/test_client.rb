@@ -33,9 +33,10 @@ class TestClient < Test::Unit::TestCase
       @users = {}
       @last_map = nil
       @last_list = nil
+      @last_status = nil
     end
 
-    attr_accessor :last_map, :last_list
+    attr_accessor :last_map, :last_list, :last_status
 
     def store(obj)
       @users[obj.uid] = obj
@@ -51,6 +52,10 @@ class TestClient < Test::Unit::TestCase
 
     def set_list(l)
       @last_list = l
+    end
+
+    def set_status(s)
+      @last_status = s
     end
   end
 
@@ -149,6 +154,30 @@ class TestClient < Test::Unit::TestCase
     rescue Interrupt => e
       puts e.backtrace
     end
+
+    st.join
+  end
+
+  def test_enum
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    @client.set_status :ON
+
+    st.join
+
+    assert_equal 0, @handler.last_status
+  end
+
+  def test_enum_recv
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    @handler.last_status = 0
+
+    assert_equal :ON, @client.last_status
 
     st.join
   end

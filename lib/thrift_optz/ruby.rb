@@ -7,6 +7,7 @@ module ThriftOptz
       @namespace = nil
       @indent = 0
       @structs = {}
+      @enums = {}
 
       @stream = stream
 
@@ -22,6 +23,20 @@ module ThriftOptz
     end
 
     def process_include(inc)
+    end
+
+    def process_enum(enum)
+      e = "Enum_#{enum.name}"
+      o "#{e} = Hash.new { |h,k| p [:bad, k]; h[k] = -1 }"
+
+      idx = 0
+      enum.values.each do |f|
+        o "#{e}[#{idx}] = :'#{f}'"
+        o "#{e}[:'#{f}'] = #{idx}"
+        idx += 1
+      end
+
+      @enums[enum.name] = enum
     end
 
     def process_struct(str)
@@ -100,6 +115,8 @@ module ThriftOptz
 
     def wire_type(t)
       return "::Thrift::Types::STRUCT" if @structs[t]
+      return "::Thrift::Types::I32" if @enums[t]
+
       case t
       when ThriftOptz::Parser::AST::Map
         "::Thrift::Types::MAP"
@@ -178,6 +195,11 @@ module ThriftOptz
             o "op.write_field_begin '#{arg.name}', ::Thrift::Types::STRUCT, #{arg.index}"
             output_struct desc, arg.name
             o "op.write_field_end"
+          elsif desc = @enums[arg.type]
+            o "op.write_field_begin '#{arg.name}', ::Thrift::Types::I32, #{arg.index}"
+            o "op.write_i32 Enum_#{desc.name}[#{arg.name}.to_sym]"
+
+            o "op.write_field_end"
           elsif arg.type.kind_of? ThriftOptz::Parser::AST::Map
             o "op.write_field_begin '#{arg.name}', ::Thrift::Types::MAP, #{arg.index}"
             o "op.write_map_begin(#{wire_type(arg.type.key)}, #{wire_type(arg.type.value)}, #{arg.name}.size)"
@@ -227,6 +249,14 @@ module ThriftOptz
             o "else"
             o "  result = read_generic rtype, rid, #{desc.name}"
             o "end"
+          elsif desc = @enums[func.return_type]
+            o "_, rtype, rid = ip.read_field_begin"
+            o "if rtype != #{wire_type(func.return_type)}"
+            o "  handle_unexpected rtype"
+            o "else"
+            o "  result = Enum_#{desc.name}[ip.read_i32]"
+            o "end"
+
           elsif func.return_type.kind_of? ThriftOptz::Parser::AST::Map
             ft = func.return_type
 

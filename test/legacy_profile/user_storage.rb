@@ -98,6 +98,35 @@ module UserStorage
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'last_list failed: unknown result')
     end
 
+    def set_status(s)
+      send_set_status(s)
+      recv_set_status()
+    end
+
+    def send_set_status(s)
+      send_message('set_status', Set_status_args, :s => s)
+    end
+
+    def recv_set_status()
+      result = receive_message(Set_status_result)
+      return
+    end
+
+    def last_status()
+      send_last_status()
+      return recv_last_status()
+    end
+
+    def send_last_status()
+      send_message('last_status', Last_status_args)
+    end
+
+    def recv_last_status()
+      result = receive_message(Last_status_result)
+      return result.success unless result.success.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'last_status failed: unknown result')
+    end
+
   end
 
   class Processor
@@ -143,6 +172,20 @@ module UserStorage
       result = Last_list_result.new()
       result.success = @handler.last_list()
       write_result(result, oprot, 'last_list', seqid)
+    end
+
+    def process_set_status(seqid, iprot, oprot)
+      args = read_args(iprot, Set_status_args)
+      result = Set_status_result.new()
+      @handler.set_status(args.s)
+      write_result(result, oprot, 'set_status', seqid)
+    end
+
+    def process_last_status(seqid, iprot, oprot)
+      args = read_args(iprot, Last_status_args)
+      result = Last_status_result.new()
+      result.success = @handler.last_status()
+      write_result(result, oprot, 'last_status', seqid)
     end
 
   end
@@ -331,6 +374,74 @@ module UserStorage
     def struct_fields; FIELDS; end
 
     def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_status_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    S = 1
+
+    FIELDS = {
+      S => {:type => ::Thrift::Types::I32, :name => 's', :enum_class => Status}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+      unless @s.nil? || Status::VALID_VALUES.include?(@s)
+        raise ::Thrift::ProtocolException.new(::Thrift::ProtocolException::UNKNOWN, 'Invalid value of field s!')
+      end
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_status_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Last_status_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Last_status_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::I32, :name => 'success', :enum_class => Status}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+      unless @success.nil? || Status::VALID_VALUES.include?(@success)
+        raise ::Thrift::ProtocolException.new(::Thrift::ProtocolException::UNKNOWN, 'Invalid value of field success!')
+      end
     end
 
     ::Thrift::Struct.generate_accessors self

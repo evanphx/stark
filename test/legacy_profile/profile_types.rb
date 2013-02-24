@@ -5,6 +5,15 @@
 #
 
 
+module Status
+  ON = 0
+  OFF = 1
+  DEAD = 2
+  ALIVE = 3
+  VALUE_MAP = {0 => "ON", 1 => "OFF", 2 => "DEAD", 3 => "ALIVE"}
+  VALID_VALUES = Set.new([ON, OFF, DEAD, ALIVE]).freeze
+end
+
 class UserProfile
   include ::Thrift::Struct, ::Thrift::Struct_Union
   UID = 1

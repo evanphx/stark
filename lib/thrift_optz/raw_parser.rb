@@ -398,9 +398,11 @@ class ThriftOptz::Parser
       attr_reader :value
     end
     class Enum < Node
-      def initialize(values)
+      def initialize(name, values)
+        @name = name
         @values = values
       end
+      attr_reader :name
       attr_reader :values
     end
     class Exception < Node
@@ -509,8 +511,8 @@ class ThriftOptz::Parser
   def const_str(value)
     AST::ConstString.new(value)
   end
-  def enum(values)
-    AST::Enum.new(values)
+  def enum(name, values)
+    AST::Enum.new(name, values)
   end
   def exception(name, fields)
     AST::Exception.new(name, fields)
@@ -1936,7 +1938,7 @@ class ThriftOptz::Parser
     return _tmp
   end
 
-  # Enum = "enum" - tok_identifier osp "{" obsp EnumDefList:vals obsp "}" {enum(vals)}
+  # Enum = "enum" - tok_identifier:name osp "{" obsp EnumDefList:vals obsp "}" {enum(name, vals)}
   def _Enum
 
     _save = self.pos
@@ -1952,6 +1954,7 @@ class ThriftOptz::Parser
         break
       end
       _tmp = apply(:_tok_identifier)
+      name = @result
       unless _tmp
         self.pos = _save
         break
@@ -1987,7 +1990,7 @@ class ThriftOptz::Parser
         self.pos = _save
         break
       end
-      @result = begin; enum(vals); end
+      @result = begin; enum(name, vals); end
       _tmp = true
       unless _tmp
         self.pos = _save
@@ -3970,7 +3973,7 @@ class ThriftOptz::Parser
   Rules[:_TypeDefinition] = rule_info("TypeDefinition", "(Typedef | Enum | Senum | Struct | Xception)")
   Rules[:_Typedef] = rule_info("Typedef", "\"typedef\" - FieldType tok_identifier")
   Rules[:_CommaOrSemicolonOptional] = rule_info("CommaOrSemicolonOptional", "(\",\" | \";\")? obsp")
-  Rules[:_Enum] = rule_info("Enum", "\"enum\" - tok_identifier osp \"{\" obsp EnumDefList:vals obsp \"}\" {enum(vals)}")
+  Rules[:_Enum] = rule_info("Enum", "\"enum\" - tok_identifier:name osp \"{\" obsp EnumDefList:vals obsp \"}\" {enum(name, vals)}")
   Rules[:_EnumDefList] = rule_info("EnumDefList", "(EnumDefList:l EnumDef:e { l + [e] } | EnumDef:e { [e] })")
   Rules[:_EnumDef] = rule_info("EnumDef", "(CaptureDocText tok_identifier \"=\" tok_int_constant CommaOrSemicolonOptional | CaptureDocText tok_identifier CommaOrSemicolonOptional)")
   Rules[:_Senum] = rule_info("Senum", "\"senum\" - tok_identifier \"{\" SenumDefList \"}\"")
