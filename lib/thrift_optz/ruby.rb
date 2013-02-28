@@ -16,6 +16,7 @@ module ThriftOptz
       o "require 'thrift_optz/struct'"
       o "require 'thrift_optz/field'"
       o "require 'thrift_optz/converters'"
+      o "require 'thrift_optz/processor'"
     end
 
     def process_namespace(ns)
@@ -159,6 +160,144 @@ module ThriftOptz
 
       o "op.write_field_stop"
       o "op.write_struct_end"
+    end
+
+    def write_processor(serv)
+      o "class Processor < ThriftOptz::Processor"
+      indent
+
+      serv.functions.each do |func|
+        o "def process_#{func.name}(seqid, ip, op)"
+        indent
+
+        o "ip.read_struct_begin"
+        args = Array(func.arguments)
+        o "args = Array.new(#{args.size})"
+
+        args.each do |arg|
+          if desc = @structs[arg.type]
+            o "_, rtype, rid = ip.read_field_begin"
+            o "if rtype != #{wire_type(arg.type)}"
+            o "  handle_unexpected rtype"
+            o "else"
+            o "  args[#{arg.index - 1}] = read_struct ip, rtype, rid, #{desc.name}"
+            o "end"
+            o "ip.read_field_end"
+          elsif desc = @enums[arg.type]
+            o "_, rtype, _ = ip.read_field_begin"
+            o "if rtype != #{wire_type(arg.type)}"
+            o "  handle_unexpected rtype"
+            o "else"
+            o "  args[#{arg.index - 1}] = Enum_#{desc.name}[ip.read_i32]"
+            o "end"
+            o "ip.read_field_end"
+
+          elsif arg.type.kind_of? ThriftOptz::Parser::AST::Map
+            ft = arg.type
+
+            o "_, rtype, _ = ip.read_field_begin"
+            o "if rtype != #{wire_type(arg.type)}"
+            o "  handle_unexpected rtype"
+            o "else"
+            o "  kt, vt, size = ip.read_map_begin"
+            o "  if kt == #{wire_type(ft.key)} && vt == #{wire_type(ft.value)}"
+            o "    result = {}"
+            o "    size.times do"
+            o "      result[ip.#{read_func(ft.key)}] = ip.#{read_func(ft.value)}"
+            o "    end"
+            o "    args[#{arg.index - 1}] = result"
+            o "  else"
+            o "    handle_bad_map size"
+            o "  end"
+            o "  ip.read_map_end"
+            o "end"
+            o "ip.read_field_end"
+          elsif arg.type.kind_of? ThriftOptz::Parser::AST::List
+            ft = arg.type
+            o "_, rtype, _ = ip.read_field_begin"
+            o "if rtype == ::Thrift::Types::LIST"
+            o "  vt, size = ip.read_list_begin"
+            o "  if vt == #{wire_type(ft.value)}"
+            o "    args[#{arg.index - 1}] = Array.new(size) { |n| ip.#{read_func(ft.value)} }"
+            o "  else"
+            o "    handle_bad_list size"
+            o "  end"
+            o "  ip.read_list_end"
+            o "else"
+            o "  handle_unexpected rtype"
+            o "end"
+            o "ip.read_field_end"
+          else
+            o "_, rtype, _ = ip.read_field_begin"
+            o "if rtype == #{type(arg.type)}"
+            o "  args[#{arg.index - 1}]= ip.#{read_func(arg.type)}"
+            o "else"
+            o "  handle_unexpected rtype"
+            o "end"
+            o "ip.read_field_end"
+          end
+        end
+
+        o "_, rtype, _ = ip.read_field_begin"
+        o "fail unless rtype == ::Thrift::Types::STOP"
+        o "ip.read_struct_end"
+        o "ip.read_message_end"
+
+        o "result = @handler.#{func.name}(*args)"
+
+        o "op.write_message_begin '#{func.name}', ::Thrift::MessageTypes::REPLY, seqid"
+        o "op.write_struct_begin '#{func.name}_result'"
+
+        ft = func.return_type
+
+        if desc = @structs[ft]
+          o "op.write_field_begin 'result', ::Thrift::Types::STRUCT, 0"
+          output_struct desc, "result"
+          o "op.write_field_end"
+        elsif desc = @enums[ft]
+          o "op.write_field_begin 'result', ::Thrift::Types::I32, 0"
+          o "op.write_i32 Enum_#{desc.name}[result.to_sym]"
+
+          o "op.write_field_end"
+        elsif ft.kind_of? ThriftOptz::Parser::AST::Map
+          o "op.write_field_begin 'result', ::Thrift::Types::MAP, 0"
+          o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, result.size)"
+
+          o "result.each do |k,v|"
+          indent
+          o "op.#{write_func(ft.key)} k"
+          o "op.#{write_func(ft.value)} v"
+          outdent
+          o "end"
+
+          o "op.write_map_end"
+          o "op.write_field_end"
+        elsif ft.kind_of? ThriftOptz::Parser::AST::List
+          o "result = Array(result)"
+          o "op.write_field_begin 'result', ::Thrift::Types::LIST, 0"
+          o "op.write_list_begin(#{wire_type(ft.value)}, result.size)"
+          o "result.each { |v| op.#{write_func(ft.value)}(v) }"
+          o "op.write_list_end"
+
+          o "op.write_field_end"
+        elsif ft != "void"
+          o "op.write_field_begin 'result', #{type(ft)}, 0"
+          o "op.#{write_func(ft)} result"
+          o "op.write_field_end"
+        end
+
+        o "op.write_field_stop"
+        o "op.write_struct_end"
+        o "op.write_message_end"
+        o "op.trans.flush"
+        o "return result"
+
+        outdent
+        o "end"
+      end
+
+      outdent
+      o "end"
     end
 
     def process_service(serv)
@@ -314,6 +453,8 @@ module ThriftOptz
 
       outdent
       o "end"
+
+      write_processor serv
 
       outdent
       o "end"
