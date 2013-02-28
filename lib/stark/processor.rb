@@ -1,4 +1,4 @@
-module ThriftOptz
+module Stark
   class Processor
     def initialize(handler)
       @handler = handler
@@ -10,10 +10,10 @@ module ThriftOptz
         send("process_#{name}", seqid, iprot, oprot)
         true
       else
-        iprot.skip(Types::STRUCT)
+        iprot.skip(::Thrift::Types::STRUCT)
         iprot.read_message_end
-        x = ApplicationException.new(ApplicationException::UNKNOWN_METHOD, 'Unknown function '+name)
-        oprot.write_message_begin(name, MessageTypes::EXCEPTION, seqid)
+        x = ::Thrift::ApplicationException.new(Thrift::ApplicationException::UNKNOWN_METHOD, 'Unknown function '+name)
+        oprot.write_message_begin(name, ::Thrift::MessageTypes::EXCEPTION, seqid)
         x.write(oprot)
         oprot.write_message_end
         oprot.trans.flush

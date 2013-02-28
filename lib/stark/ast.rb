@@ -1,6 +1,6 @@
-require 'thrift_optz/parser'
+require 'stark/parser'
 
-class ThriftOptz::Parser
+class Stark::Parser
   module AST
     class Namespace
       def accept(obj)

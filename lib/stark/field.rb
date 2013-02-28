@@ -1,6 +1,6 @@
-require 'thrift_optz/converters'
+require 'stark/converters'
 
-module ThriftOptz
+module Stark
   class Field
     def initialize(idx, name, converter)
       @index = idx

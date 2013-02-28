@@ -1,4 +1,4 @@
-= thrift-optz
+= stark
 
 * FIX (url)
 

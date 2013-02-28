@@ -1,4 +1,6 @@
-module ThriftOptz
+require 'thrift'
+
+module Stark
   module Converters
     module I32
       module_function

@@ -1,4 +1,4 @@
-%% name = ThriftOptz::Parser
+%% name = Stark::Parser
 
 %% namespace = ast Namespace(lang, namespace)
 %% include = ast Include(path)

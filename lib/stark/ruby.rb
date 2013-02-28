@@ -1,6 +1,6 @@
-require 'thrift_optz/ast'
+require 'stark/ast'
 
-module ThriftOptz
+module Stark
   class Ruby
     def initialize(stream=STDOUT)
 
@@ -12,11 +12,11 @@ module ThriftOptz
       @stream = stream
 
 
-      o "require 'thrift_optz/client'"
-      o "require 'thrift_optz/struct'"
-      o "require 'thrift_optz/field'"
-      o "require 'thrift_optz/converters'"
-      o "require 'thrift_optz/processor'"
+      o "require 'stark/client'"
+      o "require 'stark/struct'"
+      o "require 'stark/field'"
+      o "require 'stark/converters'"
+      o "require 'stark/processor'"
     end
 
     def process_namespace(ns)
@@ -43,15 +43,15 @@ module ThriftOptz
     def process_struct(str)
       @structs[str.name] = str
 
-      o "class #{str.name} < ThriftOptz::Struct"
+      o "class #{str.name} < Stark::Struct"
       indent
       o "Fields = {"
       indent
 
       str.fields.each do |f|
-        c = "ThriftOptz::Converters::#{f.type.upcase}"
+        c = "Stark::Converters::#{f.type.upcase}"
 
-        o "#{f.index} => ThriftOptz::Field.new(#{f.index}, '#{f.name}', #{c}),"
+        o "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c}),"
       end
 
       o ":count => #{str.fields.size}"
@@ -119,11 +119,11 @@ module ThriftOptz
       return "::Thrift::Types::I32" if @enums[t]
 
       case t
-      when ThriftOptz::Parser::AST::Map
+      when Stark::Parser::AST::Map
         "::Thrift::Types::MAP"
-      when ThriftOptz::Parser::AST::List
+      when Stark::Parser::AST::List
         "::Thrift::Types::LIST"
-      when ThriftOptz::Parser::AST::Set
+      when Stark::Parser::AST::Set
         "::Thrift::Types::SET"
       else
         type t
@@ -163,7 +163,7 @@ module ThriftOptz
     end
 
     def write_processor(serv)
-      o "class Processor < ThriftOptz::Processor"
+      o "class Processor < Stark::Processor"
       indent
 
       serv.functions.each do |func|
@@ -192,7 +192,7 @@ module ThriftOptz
             o "end"
             o "ip.read_field_end"
 
-          elsif arg.type.kind_of? ThriftOptz::Parser::AST::Map
+          elsif arg.type.kind_of? Stark::Parser::AST::Map
             ft = arg.type
 
             o "_, rtype, _ = ip.read_field_begin"
@@ -212,7 +212,7 @@ module ThriftOptz
             o "  ip.read_map_end"
             o "end"
             o "ip.read_field_end"
-          elsif arg.type.kind_of? ThriftOptz::Parser::AST::List
+          elsif arg.type.kind_of? Stark::Parser::AST::List
             ft = arg.type
             o "_, rtype, _ = ip.read_field_begin"
             o "if rtype == ::Thrift::Types::LIST"
@@ -259,7 +259,7 @@ module ThriftOptz
           o "op.write_i32 Enum_#{desc.name}[result.to_sym]"
 
           o "op.write_field_end"
-        elsif ft.kind_of? ThriftOptz::Parser::AST::Map
+        elsif ft.kind_of? Stark::Parser::AST::Map
           o "result = hash_cast result"
           o "op.write_field_begin 'result', ::Thrift::Types::MAP, 0"
           o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, result.size)"
@@ -273,7 +273,7 @@ module ThriftOptz
 
           o "op.write_map_end"
           o "op.write_field_end"
-        elsif ft.kind_of? ThriftOptz::Parser::AST::List
+        elsif ft.kind_of? Stark::Parser::AST::List
           o "result = Array(result)"
           o "op.write_field_begin 'result', ::Thrift::Types::LIST, 0"
           o "op.write_list_begin(#{wire_type(ft.value)}, result.size)"
@@ -304,7 +304,7 @@ module ThriftOptz
     def process_service(serv)
       o "module #{serv.name}"
       indent
-      o "class Client < ThriftOptz::Client"
+      o "class Client < Stark::Client"
       indent
 
       o "Functions = {}"
@@ -340,7 +340,7 @@ module ThriftOptz
             o "op.write_i32 Enum_#{desc.name}[#{arg.name}.to_sym]"
 
             o "op.write_field_end"
-          elsif arg.type.kind_of? ThriftOptz::Parser::AST::Map
+          elsif arg.type.kind_of? Stark::Parser::AST::Map
             o "#{arg.name} = hash_cast #{arg.name}"
             o "op.write_field_begin '#{arg.name}', ::Thrift::Types::MAP, #{arg.index}"
             o "op.write_map_begin(#{wire_type(arg.type.key)}, #{wire_type(arg.type.value)}, #{arg.name}.size)"
@@ -354,7 +354,7 @@ module ThriftOptz
 
             o "op.write_map_end"
             o "op.write_field_end"
-          elsif arg.type.kind_of? ThriftOptz::Parser::AST::List
+          elsif arg.type.kind_of? Stark::Parser::AST::List
             o "#{arg.name} = Array(#{arg.name})"
             o "op.write_field_begin '#{arg.name}', ::Thrift::Types::LIST, #{arg.index}"
             o "op.write_list_begin(#{wire_type(arg.type.value)}, #{arg.name}.size)"
@@ -399,7 +399,7 @@ module ThriftOptz
             o "  result = Enum_#{desc.name}[ip.read_i32]"
             o "end"
 
-          elsif func.return_type.kind_of? ThriftOptz::Parser::AST::Map
+          elsif func.return_type.kind_of? Stark::Parser::AST::Map
             ft = func.return_type
 
             o "_, rtype, rid = ip.read_field_begin"
@@ -417,7 +417,7 @@ module ThriftOptz
             o "  end"
             o "  ip.read_map_end"
             o "end"
-          elsif func.return_type.kind_of? ThriftOptz::Parser::AST::List
+          elsif func.return_type.kind_of? Stark::Parser::AST::List
             ft = func.return_type
             o "_, rtype, rid = ip.read_field_begin"
             o "if rtype == ::Thrift::Types::LIST"

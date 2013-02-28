@@ -1,7 +1,7 @@
 require 'thrift'
 
-module ThriftOptz
-  VERSION = '1.0.0'
+module Stark
+  VERSION = '0.5.0'
 
   def self.pipe_transport
     cr, cw = IO.pipe
@@ -14,13 +14,13 @@ module ThriftOptz
   end
 
   def self.materialize(file, namespace=Object)
-    require 'thrift_optz/parser'
-    require 'thrift_optz/ruby'
+    require 'stark/parser'
+    require 'stark/ruby'
     require 'stringio'
 
     data = File.read file
 
-    tg = ThriftOptz::Parser.new data
+    tg = Stark::Parser.new data
 
     unless tg.parse
       tg.raise_error
@@ -28,7 +28,7 @@ module ThriftOptz
 
     stream = StringIO.new
 
-    ruby = ThriftOptz::Ruby.new stream
+    ruby = Stark::Ruby.new stream
 
     tg.result.each { |i| i.accept ruby }
 

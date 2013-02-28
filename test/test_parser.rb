@@ -1,9 +1,9 @@
 require 'test/unit'
-require 'thrift_optz/parser'
+require 'stark/parser'
 
 class TestParser < Test::Unit::TestCase
   def parse(data)
-    tg = ThriftOptz::Parser.new data
+    tg = Stark::Parser.new data
 
     unless tg.parse
       tg.raise_error
@@ -54,7 +54,7 @@ struct Foo {
     EOM
   end
 
-  include ThriftOptz::Parser::AST
+  include Stark::Parser::AST
 
   def comment(text)
     Comment.new(text)
@@ -124,7 +124,7 @@ struct Foo {
   def test_spec
     data = File.read "test/ThriftSpec.thrift"
 
-    tg = ThriftOptz::Parser.new data
+    tg = Stark::Parser.new data
 
     unless tg.parse
       tg.raise_error

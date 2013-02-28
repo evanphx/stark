@@ -1,6 +1,6 @@
 require 'test/unit'
 
-require 'thrift_optz'
+require 'stark'
 
 require 'rubygems'
 require 'thrift'
@@ -9,12 +9,12 @@ Thread.abort_on_exception = true
 
 class TestServer < Test::Unit::TestCase
   def setup
-    @client_t, @server_t = ThriftOptz.pipe_transport
+    @client_t, @server_t = Stark.pipe_transport
     @client_p = Thrift::BinaryProtocol.new @client_t
     @server_p = Thrift::BinaryProtocol.new @server_t
 
     @n = Module.new
-    ThriftOptz.materialize "test/profile.thrift", @n
+    Stark.materialize "test/profile.thrift", @n
 
     @client = @n::UserStorage::Client.new @client_p, @client_p
     @handler = Handler.new

@@ -1,4 +1,4 @@
-module ThriftOptz
+module Stark
   class Struct
     def initialize(fields={})
       @fields = fields

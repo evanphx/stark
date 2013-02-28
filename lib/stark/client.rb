@@ -1,4 +1,6 @@
-module ThriftOptz
+require 'stark'
+
+module Stark
   class Client
     def initialize(iprot, oprot)
       @iprot = iprot

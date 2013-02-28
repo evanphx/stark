@@ -1,4 +1,4 @@
-class ThriftOptz::Parser
+class Stark::Parser
   # :stopdoc:
 
     # This is distinct from setup_parser so that a standalone parser

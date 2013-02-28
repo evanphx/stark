@@ -1,4 +1,6 @@
-module ThriftOptz
+require 'thrift'
+
+module Stark
   class LogTransport < Thrift::BaseTransport
     def initialize(inner, prefix="log")
       @prefix = prefix
