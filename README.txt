@@ -1,26 +1,32 @@
 = stark
 
-* FIX (url)
+* http://github.com/evanphx/stark
 
 == DESCRIPTION:
 
-FIX (describe your package)
+Optimized thrift bindings for ruby
 
 == FEATURES/PROBLEMS:
 
-* FIX (list of features or problems)
+* Generates much more straightforward code for thrift clients and servers
+  than the default thrift bindings for ruby
 
 == SYNOPSIS:
 
-  FIX (code sample of usage)
+  $ stark service.thrift > service.rb
+  require 'service'
+
+  Use Service::Client and Service::Processor like the default thrift
+  docs describe them.
 
 == REQUIREMENTS:
 
-* FIX (list of requirements)
+* thrift gem
+* .thift files
 
 == INSTALL:
 
-* FIX (sudo gem install, anything else)
+* gem install stark
 
 == DEVELOPERS:
 
@@ -35,7 +41,7 @@ and generate the RDoc.
 
 (The MIT License)
 
-Copyright (c) 2012 FIX
+Copyright (c) 2013 Evan Phoenix
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
