@@ -30,6 +30,13 @@ module ThriftOptz
       end
     end
 
+    def hash_cast(obj)
+      return obj if obj.kind_of? Hash
+      return obj.to_h if obj.respond_to? :to_h
+
+      raise TypeError, "Unable to convert #{obj.class} to Hash"
+    end
+
     def read_generic(type, id, cls)
       ip = @iprot
 

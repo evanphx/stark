@@ -260,6 +260,7 @@ module ThriftOptz
 
           o "op.write_field_end"
         elsif ft.kind_of? ThriftOptz::Parser::AST::Map
+          o "result = hash_cast result"
           o "op.write_field_begin 'result', ::Thrift::Types::MAP, 0"
           o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, result.size)"
 
@@ -340,6 +341,7 @@ module ThriftOptz
 
             o "op.write_field_end"
           elsif arg.type.kind_of? ThriftOptz::Parser::AST::Map
+            o "#{arg.name} = hash_cast #{arg.name}"
             o "op.write_field_begin '#{arg.name}', ::Thrift::Types::MAP, #{arg.index}"
             o "op.write_map_begin(#{wire_type(arg.type.key)}, #{wire_type(arg.type.value)}, #{arg.name}.size)"
 
@@ -353,6 +355,7 @@ module ThriftOptz
             o "op.write_map_end"
             o "op.write_field_end"
           elsif arg.type.kind_of? ThriftOptz::Parser::AST::List
+            o "#{arg.name} = Array(#{arg.name})"
             o "op.write_field_begin '#{arg.name}', ::Thrift::Types::LIST, #{arg.index}"
             o "op.write_list_begin(#{wire_type(arg.type.value)}, #{arg.name}.size)"
             o "#{arg.name}.each { |v| op.#{write_func(arg.type.value)}(v) }"
