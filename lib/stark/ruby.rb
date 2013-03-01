@@ -8,6 +8,7 @@ module Stark
       @indent = 0
       @structs = {}
       @enums = {}
+      @exceptions = {}
 
       @stream = stream
 
@@ -17,6 +18,7 @@ module Stark
       o "require 'stark/field'"
       o "require 'stark/converters'"
       o "require 'stark/processor'"
+      o "require 'stark/exception'"
     end
 
     def process_namespace(ns)
@@ -58,9 +60,51 @@ module Stark
 
       outdent
       o "}"
+
+      str.fields.each do |f|
+        o "def #{f.name}; @fields['#{f.name}']; end"
+      end
+
       outdent
       o "end"
 
+    end
+
+    def process_exception(str)
+      @exceptions[str.name] = str
+
+      o "class #{str.name} < Stark::Exception"
+      indent
+
+      o "class Struct < Stark::Struct"
+      indent
+      o "Fields = {"
+      indent
+
+      str.fields.each do |f|
+        c = "Stark::Converters::#{f.type.upcase}"
+
+        o "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c}),"
+      end
+
+      o ":count => #{str.fields.size}"
+
+      outdent
+      o "}"
+
+      str.fields.each do |f|
+        o "def #{f.name}; @fields['#{f.name}']; end"
+      end
+
+      outdent
+      o "end"
+
+      str.fields.each do |f|
+        o "def #{f.name}; @struct.#{f.name}; end"
+      end
+
+      outdent
+      o "end"
     end
 
     def o(str)
@@ -376,23 +420,31 @@ module Stark
 
         o "ip = @iprot"
         o "_, mtype, _ = ip.read_message_begin"
+
         o "handle_exception mtype"
 
         o "ip.read_struct_begin"
+
+        o "_, rtype, rid = ip.read_field_begin"
+
+        if t = func.throws
+          o "if rid == 1"
+          o "  handle_throw #{t.first.type}"
+          o "end"
+        end
+
+        o "fail unless rid == 0"
+
         o "result = nil"
 
-        if func.return_type == "void"
-          o "_, rtype, _ = ip.read_field_begin"
-        else
+        if func.return_type != "void"
           if desc = @structs[func.return_type]
-            o "_, rtype, rid = ip.read_field_begin"
             o "if rtype != #{wire_type(func.return_type)}"
             o "  handle_unexpected rtype"
             o "else"
             o "  result = read_generic rtype, rid, #{desc.name}"
             o "end"
           elsif desc = @enums[func.return_type]
-            o "_, rtype, rid = ip.read_field_begin"
             o "if rtype != #{wire_type(func.return_type)}"
             o "  handle_unexpected rtype"
             o "else"
@@ -402,7 +454,6 @@ module Stark
           elsif func.return_type.kind_of? Stark::Parser::AST::Map
             ft = func.return_type
 
-            o "_, rtype, rid = ip.read_field_begin"
             o "if rtype != #{wire_type(func.return_type)}"
             o "  handle_unexpected rtype"
             o "else"
@@ -419,7 +470,6 @@ module Stark
             o "end"
           elsif func.return_type.kind_of? Stark::Parser::AST::List
             ft = func.return_type
-            o "_, rtype, rid = ip.read_field_begin"
             o "if rtype == ::Thrift::Types::LIST"
             o "  vt, size = ip.read_list_begin"
             o "  if vt == #{wire_type(ft.value)}"
@@ -432,7 +482,6 @@ module Stark
             o "  handle_unexpected rtype"
             o "end"
           else
-            o "_, rtype, _ = ip.read_field_begin"
             o "if rtype == #{type(func.return_type)}"
             o "  result = ip.#{read_func(func.return_type)}"
             o "else"

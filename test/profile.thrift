@@ -11,6 +11,10 @@ enum Status {
   ALIVE
 }
 
+exception RockTooHard {
+  1: i32 volume
+}
+
 service UserStorage {
   void store(1: UserProfile xuser),
   UserProfile retrieve(1: i32 xuid),
@@ -19,6 +23,7 @@ service UserStorage {
   void set_list(1: list<string> l),
   list<string> last_list(),
   void set_status(1: Status s),
-  Status last_status()
+  Status last_status(),
+  i32 volume_up() throws (1: RockTooHard exc)
 }
 

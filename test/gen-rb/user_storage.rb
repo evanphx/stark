@@ -127,6 +127,22 @@ module UserStorage
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'last_status failed: unknown result')
     end
 
+    def volume_up()
+      send_volume_up()
+      return recv_volume_up()
+    end
+
+    def send_volume_up()
+      send_message('volume_up', Volume_up_args)
+    end
+
+    def recv_volume_up()
+      result = receive_message(Volume_up_result)
+      return result.success unless result.success.nil?
+      raise result.exc unless result.exc.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'volume_up failed: unknown result')
+    end
+
   end
 
   class Processor
@@ -186,6 +202,17 @@ module UserStorage
       result = Last_status_result.new()
       result.success = @handler.last_status()
       write_result(result, oprot, 'last_status', seqid)
+    end
+
+    def process_volume_up(seqid, iprot, oprot)
+      args = read_args(iprot, Volume_up_args)
+      result = Volume_up_result.new()
+      begin
+        result.success = @handler.volume_up()
+      rescue RockTooHard => exc
+        result.exc = exc
+      end
+      write_result(result, oprot, 'volume_up', seqid)
     end
 
   end
@@ -442,6 +469,39 @@ module UserStorage
       unless @success.nil? || Status::VALID_VALUES.include?(@success)
         raise ::Thrift::ProtocolException.new(::Thrift::ProtocolException::UNKNOWN, 'Invalid value of field success!')
       end
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Volume_up_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Volume_up_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+    EXC = 1
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::I32, :name => 'success'},
+      EXC => {:type => ::Thrift::Types::STRUCT, :name => 'exc', :class => RockTooHard}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
     end
 
     ::Thrift::Struct.generate_accessors self

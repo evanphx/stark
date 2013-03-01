@@ -14,13 +14,5 @@ module Stark
         ip.skip type
       end
     end
-
-    def method_missing(meth, *args)
-      if val = @fields[meth.to_s]
-        return val
-      end
-
-      super
-    end
   end
 end

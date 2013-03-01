@@ -34,3 +34,19 @@ class UserProfile
   ::Thrift::Struct.generate_accessors self
 end
 
+class RockTooHard < ::Thrift::Exception
+  include ::Thrift::Struct, ::Thrift::Struct_Union
+  VOLUME = 1
+
+  FIELDS = {
+    VOLUME => {:type => ::Thrift::Types::I32, :name => 'volume'}
+  }
+
+  def struct_fields; FIELDS; end
+
+  def validate
+  end
+
+  ::Thrift::Struct.generate_accessors self
+end
+

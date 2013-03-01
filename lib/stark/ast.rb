@@ -43,5 +43,11 @@ class Stark::Parser
         obj.process_enum self
       end
     end
+
+    class Exception
+      def accept(obj)
+        obj.process_exception self
+      end
+    end
   end
 end

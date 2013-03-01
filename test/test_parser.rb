@@ -10,6 +10,8 @@ class TestParser < Test::Unit::TestCase
     end
 
     assert tg.result
+
+    return tg.result
   end
 
   def test_ccomment
@@ -119,6 +121,21 @@ struct Foo {
       assert_type exc[1], arg.type
       assert_equal exc[2], arg.name
     end
+  end
+
+  def test_throws
+    o = parse <<-EOM
+service Foo {
+  i32 foo() throws (1: i32 code)
+}
+    EOM
+
+    o = o.first
+
+    assert_equal "Foo", o.name
+
+    assert_func o.functions[0], "i32", "foo", nil
+    assert_field o.functions[0].throws.first, 1, "i32", "code"
   end
 
   def test_spec

@@ -16,6 +16,29 @@ module Stark
       end
     end
 
+    def handle_throw(cls)
+      ip = @iprot
+
+      obj = cls::Struct.new
+
+      ip.read_struct_begin
+
+      while true
+        _, ftype, fid = ip.read_field_begin
+        break if ftype == ::Thrift::Types::STOP
+
+        obj.set_from_index ftype, fid, ip
+
+        ip.read_field_end
+      end
+
+      ip.read_struct_end
+
+      ip.read_message_end
+
+      raise cls.new(obj)
+    end
+
     def handle_unexpected(rtype)
       return if rtype == ::Thrift::Types::STOP
       @iprot.skip(rtype)
