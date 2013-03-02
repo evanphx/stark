@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'hoe'
 
+Hoe.plugin :travis
 Hoe.plugin :gemspec
 Hoe.plugin :git
 
