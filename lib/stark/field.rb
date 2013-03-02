@@ -17,5 +17,11 @@ module Stark
     def read(ip)
       @converter.read ip
     end
+
+    def write(op, val)
+      op.write_field_begin @name, type, @index
+      @converter.write op, val
+      op.write_field_end
+    end
   end
 end

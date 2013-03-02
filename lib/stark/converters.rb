@@ -12,6 +12,10 @@ module Stark
       def read(ip)
         ip.read_i32
       end
+
+      def write(op, value)
+        op.write_i32 value
+      end
     end
 
     module STRING
@@ -23,6 +27,10 @@ module Stark
 
       def read(ip)
         ip.read_string
+      end
+
+      def write(op, value)
+        op.write_string value
       end
     end
   end

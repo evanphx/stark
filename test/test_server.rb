@@ -17,7 +17,7 @@ class TestServer < Test::Unit::TestCase
     Stark.materialize "test/profile.thrift", @n
 
     @client = @n::UserStorage::Client.new @client_p, @client_p
-    @handler = Handler.new
+    @handler = Handler.new @n
     @server = @n::UserStorage::Processor.new @handler
   end
 
@@ -27,11 +27,12 @@ class TestServer < Test::Unit::TestCase
   end
 
   class Handler
-    def initialize
+    def initialize(n)
       @users = {}
       @last_map = nil
       @last_list = nil
       @last_status = nil
+      @n = n
     end
 
     attr_accessor :last_map, :last_list, :last_status
@@ -54,6 +55,14 @@ class TestServer < Test::Unit::TestCase
 
     def set_status(s)
       @last_status = s
+    end
+
+    def volume_up
+      raise @n::RockTooHard.new('volume' => 11)
+    end
+
+    def make_bitcoins
+      sleep 2
     end
   end
 
@@ -172,4 +181,35 @@ class TestServer < Test::Unit::TestCase
     st.join
   end
 
+  def test_throw
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    e = assert_raises @n::RockTooHard do
+      @client.volume_up
+    end
+
+    st.join
+
+    assert_equal 11, e.volume
+  end
+
+  # Thread.abort_on_exception = true
+
+  def test_oneway
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    t = Time.now
+
+    Timeout.timeout 3 do
+      assert_equal nil, @client.make_bitcoins
+    end
+
+    assert Time.now - t < 0.1
+
+    st.join
+  end
 end

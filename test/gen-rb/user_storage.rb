@@ -143,6 +143,13 @@ module UserStorage
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'volume_up failed: unknown result')
     end
 
+    def make_bitcoins()
+      send_make_bitcoins()
+    end
+
+    def send_make_bitcoins()
+      send_message('make_bitcoins', Make_bitcoins_args)
+    end
   end
 
   class Processor
@@ -213,6 +220,12 @@ module UserStorage
         result.exc = exc
       end
       write_result(result, oprot, 'volume_up', seqid)
+    end
+
+    def process_make_bitcoins(seqid, iprot, oprot)
+      args = read_args(iprot, Make_bitcoins_args)
+      @handler.make_bitcoins()
+      return
     end
 
   end
@@ -497,6 +510,36 @@ module UserStorage
     FIELDS = {
       SUCCESS => {:type => ::Thrift::Types::I32, :name => 'success'},
       EXC => {:type => ::Thrift::Types::STRUCT, :name => 'exc', :class => RockTooHard}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Make_bitcoins_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Make_bitcoins_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
     }
 
     def struct_fields; FIELDS; end

@@ -287,7 +287,23 @@ module Stark
         o "ip.read_struct_end"
         o "ip.read_message_end"
 
-        o "result = @handler.#{func.name}(*args)"
+        if t = func.throws
+          o "result = check_raise_specific('#{func.name}', seqid, op, #{t.first.type}) do"
+        o "  @handler.#{func.name}(*args)"
+        o "end"
+
+        o "return unless result"
+
+        else
+          o "result = @handler.#{func.name}(*args)"
+        end
+
+        if func.options == :oneway
+          o "return result"
+          outdent
+          o "end"
+          next
+        end
 
         o "op.write_message_begin '#{func.name}', ::Thrift::MessageTypes::REPLY, seqid"
         o "op.write_struct_begin '#{func.name}_result'"
@@ -417,6 +433,13 @@ module Stark
         o "op.write_struct_end"
         o "op.write_message_end"
         o "op.trans.flush"
+
+        if func.options == :oneway
+          o "return"
+          outdent
+          o "end"
+          next
+        end
 
         o "ip = @iprot"
         o "_, mtype, _ = ip.read_message_begin"

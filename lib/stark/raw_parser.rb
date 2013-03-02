@@ -428,16 +428,18 @@ class Stark::Parser
       attr_reader :options
     end
     class Function < Node
-      def initialize(name, return_type, arguments, throws)
+      def initialize(name, return_type, arguments, throws, options)
         @name = name
         @return_type = return_type
         @arguments = arguments
         @throws = throws
+        @options = options
       end
       attr_reader :name
       attr_reader :return_type
       attr_reader :arguments
       attr_reader :throws
+      attr_reader :options
     end
     class Include < Node
       def initialize(path)
@@ -522,8 +524,8 @@ class Stark::Parser
   def field(index, type, name, value, options)
     AST::Field.new(index, type, name, value, options)
   end
-  def function(name, return_type, arguments, throws)
-    AST::Function.new(name, return_type, arguments, throws)
+  def function(name, return_type, arguments, throws, options)
+    AST::Function.new(name, return_type, arguments, throws, options)
   end
   def include(path)
     AST::Include.new(path)
@@ -3030,7 +3032,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # Function = CaptureDocText OneWay? FunctionType:rt - tok_identifier:name osp "(" FieldList?:args ")" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t)}
+  # Function = CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name osp "(" FieldList?:args ")" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t, o)}
   def _Function
 
     _save = self.pos
@@ -3042,10 +3044,12 @@ class Stark::Parser
       end
       _save1 = self.pos
       _tmp = apply(:_OneWay)
+      @result = nil unless _tmp
       unless _tmp
         _tmp = true
         self.pos = _save1
       end
+      o = @result
       unless _tmp
         self.pos = _save
         break
@@ -3111,7 +3115,7 @@ class Stark::Parser
         self.pos = _save
         break
       end
-      @result = begin; function(name, rt, args, t); end
+      @result = begin; function(name, rt, args, t, o); end
       _tmp = true
       unless _tmp
         self.pos = _save
@@ -3123,7 +3127,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # OneWay = ("oneway" | "async") -
+  # OneWay = ("oneway" | "async") - { :oneway }
   def _OneWay
 
     _save = self.pos
@@ -3145,6 +3149,12 @@ class Stark::Parser
         break
       end
       _tmp = apply(:__hyphen_)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin;  :oneway ; end
+      _tmp = true
       unless _tmp
         self.pos = _save
       end
@@ -4004,8 +4014,8 @@ class Stark::Parser
   Rules[:_Service] = rule_info("Service", "\"service\" - tok_identifier:name - Extends? osp \"{\" obsp FunctionList?:funcs obsp \"}\" {service(name, funcs)}")
   Rules[:_Extends] = rule_info("Extends", "\"extends\" - tok_identifier")
   Rules[:_FunctionList] = rule_info("FunctionList", "(FunctionList:l Function:f { l + [f] } | Function:f { [f] })")
-  Rules[:_Function] = rule_info("Function", "CaptureDocText OneWay? FunctionType:rt - tok_identifier:name osp \"(\" FieldList?:args \")\" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t)}")
-  Rules[:_OneWay] = rule_info("OneWay", "(\"oneway\" | \"async\") -")
+  Rules[:_Function] = rule_info("Function", "CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name osp \"(\" FieldList?:args \")\" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t, o)}")
+  Rules[:_OneWay] = rule_info("OneWay", "(\"oneway\" | \"async\") - { :oneway }")
   Rules[:_Throws] = rule_info("Throws", "- \"throws\" - \"(\" FieldList \")\"")
   Rules[:_FieldList] = rule_info("FieldList", "(FieldList:l Field:f { l + [f] } | Field:f { [f] })")
   Rules[:_Field] = rule_info("Field", "CaptureDocText FieldIdentifier?:i osp FieldRequiredness?:req osp FieldType:t osp tok_identifier:n osp FieldValue?:val CommaOrSemicolonOptional {field(i,t,n,val,req)}")

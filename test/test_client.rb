@@ -62,6 +62,10 @@ class TestClient < Test::Unit::TestCase
     def volume_up
       raise RockTooHard.new(:volume => 11)
     end
+
+    def make_bitcoins
+      sleep 2
+    end
   end
 
   def test_store_and_retrieve
@@ -189,7 +193,6 @@ class TestClient < Test::Unit::TestCase
 
   def test_throw
     st = Thread.new do
-      # Thread.abort_on_exception = true
       @server.process @server_p, @server_p
     end
 
@@ -200,5 +203,23 @@ class TestClient < Test::Unit::TestCase
     st.join
 
     assert_equal 11, e.volume
+  end
+
+  # Thread.abort_on_exception = true
+
+  def test_oneway
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    t = Time.now
+
+    Timeout.timeout 3 do
+      assert_equal nil, @client.make_bitcoins
+    end
+
+    assert Time.now - t < 0.1
+
+    st.join
   end
 end

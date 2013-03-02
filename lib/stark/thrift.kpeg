@@ -4,7 +4,7 @@
 %% include = ast Include(path)
 %% struct = ast Struct(type, name, fields)
 %% field = ast Field(index, type, name, value, options)
-%% function = ast Function(name, return_type, arguments, throws)
+%% function = ast Function(name, return_type, arguments, throws, options)
 %% service = ast Service(name, functions)
 %% comment = ast Comment(text)
 %% enum = ast Enum(name, values)
@@ -271,11 +271,11 @@ Extends = "extends" - tok_identifier
 FunctionList = FunctionList:l Function:f { l + [f] }
              | Function:f { [f] }
 
-Function = CaptureDocText OneWay? FunctionType:rt - tok_identifier:name
+Function = CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name
            osp "(" FieldList?:args ")" Throws?:t CommaOrSemicolonOptional
-           ~function(name, rt, args, t)
+           ~function(name, rt, args, t, o)
 
-OneWay = ("oneway" | "async") -
+OneWay = ("oneway" | "async") - { :oneway }
 
 Throws = - "throws" - "(" FieldList ")"
 

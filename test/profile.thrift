@@ -24,6 +24,7 @@ service UserStorage {
   list<string> last_list(),
   void set_status(1: Status s),
   Status last_status(),
-  i32 volume_up() throws (1: RockTooHard exc)
+  i32 volume_up() throws (1: RockTooHard exc),
+  oneway void make_bitcoins()
 }
 
