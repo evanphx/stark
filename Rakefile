@@ -17,6 +17,6 @@ task :parser do
   sh "kpeg -o lib/stark/raw_parser.rb -s -f lib/stark/thrift.kpeg"
 end
 
-task :test => :parser
+# task :test => :parser
 
 # vim: syntax=ruby
