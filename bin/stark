@@ -4,14 +4,20 @@ require 'rubygems'
 require 'stark/parser'
 require 'stark/ruby'
 
-data = File.read ARGV.shift
-
-tg = Stark::Parser.new data
-
-unless tg.parse
-  tg.raise_error
+file = ARGV.shift
+unless file
+  puts "stark blah.thrift <blah.rb>"
+  exit 1
 end
 
-ruby = Stark::Ruby.new
+ast = Stark::Parser.ast File.read(file)
 
-tg.result.each { |i| i.accept ruby }
+if out = ARGV.shift
+  out = File.open out, "w"
+else
+  out = STDOUT
+end
+
+ruby = Stark::Ruby.new out
+
+ast.each { |i| i.accept ruby }

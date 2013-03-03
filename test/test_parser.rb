@@ -138,6 +138,59 @@ service Foo {
     assert_field o.functions[0].throws.first, 1, "i32", "code"
   end
 
+  def test_include
+    o = parse <<-EOM
+include "test/blah.thrift"
+
+    EOM
+
+    assert_equal "test/blah.thrift", o.first.path
+  end
+
+  def test_include_expanded
+    o = parse <<-EOM
+include "test/blah.thrift"
+
+    EOM
+
+    o = Stark::Parser.expand o
+
+    assert_equal "Blah", o.first.name
+    assert_equal ["FOO", "BAR", "BAZ"], o.first.values
+  end
+
+  def test_include_to_include
+    o = parse <<-EOM
+include "test/include_blah.thrift"
+
+    EOM
+
+    o = Stark::Parser.expand o
+
+    assert_equal "Blah", o.first.name
+    assert_equal ["FOO", "BAR", "BAZ"], o.first.values
+  end
+
+  def test_ast
+    parser = Stark::Parser.new <<-EOM
+include "test/include_blah.thrift"
+EOM
+
+    o = parser.ast
+
+    assert_equal "Blah", o.first.name
+    assert_equal ["FOO", "BAR", "BAZ"], o.first.values
+  end
+
+  def test_s_ast
+    o = Stark::Parser.ast <<-EOM
+include "test/include_blah.thrift"
+EOM
+
+    assert_equal "Blah", o.first.name
+    assert_equal ["FOO", "BAR", "BAZ"], o.first.values
+  end
+
   def test_spec
     data = File.read "test/ThriftSpec.thrift"
 

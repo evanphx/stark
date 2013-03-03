@@ -184,7 +184,7 @@ HeaderList = HeaderList Header
            | Header
 
 Element = Comment
-        | Header bsp
+        | obsp Header bsp
         | Definition bsp
 
 Header = Include | Namespace

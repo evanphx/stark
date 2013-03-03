@@ -18,19 +18,13 @@ module Stark
     require 'stark/ruby'
     require 'stringio'
 
-    data = File.read file
-
-    tg = Stark::Parser.new data
-
-    unless tg.parse
-      tg.raise_error
-    end
+    ast = Stark::Parser.ast File.read(file)
 
     stream = StringIO.new
 
     ruby = Stark::Ruby.new stream
 
-    tg.result.each { |i| i.accept ruby }
+    ast.each { |i| i.accept ruby }
 
     namespace.module_eval stream.string
   end
