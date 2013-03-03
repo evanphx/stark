@@ -373,9 +373,11 @@ module Stark
 
         o "    :args => {"
 
-        Array(func.arguments).each do |a|
-          o "      #{a.index} => #{wire_type(a.type)}"
+        mapped_args = Array(func.arguments).map do |a|
+          "#{a.index} => #{wire_type(a.type)}"
         end
+
+        o "      #{mapped_args.join(', ')}"
 
         o "    }"
         o "  }"

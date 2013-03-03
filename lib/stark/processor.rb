@@ -6,6 +6,8 @@ module Stark
 
     def process(iprot, oprot)
       name, type, seqid  = iprot.read_message_begin
+      fail unless type == Thrift::MessageTypes::CALL
+
       if respond_to?("process_#{name}")
         send("process_#{name}", seqid, iprot, oprot)
         true

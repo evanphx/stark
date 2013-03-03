@@ -150,6 +150,21 @@ module UserStorage
     def send_make_bitcoins()
       send_message('make_bitcoins', Make_bitcoins_args)
     end
+    def add(a, b)
+      send_add(a, b)
+      return recv_add()
+    end
+
+    def send_add(a, b)
+      send_message('add', Add_args, :a => a, :b => b)
+    end
+
+    def recv_add()
+      result = receive_message(Add_result)
+      return result.success unless result.success.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'add failed: unknown result')
+    end
+
   end
 
   class Processor
@@ -226,6 +241,13 @@ module UserStorage
       args = read_args(iprot, Make_bitcoins_args)
       @handler.make_bitcoins()
       return
+    end
+
+    def process_add(seqid, iprot, oprot)
+      args = read_args(iprot, Add_args)
+      result = Add_result.new()
+      result.success = @handler.add(args.a, args.b)
+      write_result(result, oprot, 'add', seqid)
     end
 
   end
@@ -540,6 +562,40 @@ module UserStorage
 
     FIELDS = {
 
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Add_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    A = 1
+    B = 2
+
+    FIELDS = {
+      A => {:type => ::Thrift::Types::I32, :name => 'a'},
+      B => {:type => ::Thrift::Types::I32, :name => 'b'}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Add_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::I32, :name => 'success'}
     }
 
     def struct_fields; FIELDS; end

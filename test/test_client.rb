@@ -66,6 +66,10 @@ class TestClient < Test::Unit::TestCase
     def make_bitcoins
       sleep 2
     end
+
+    def add(a,b)
+      a + b
+    end
   end
 
   def test_store_and_retrieve
@@ -219,6 +223,16 @@ class TestClient < Test::Unit::TestCase
     end
 
     assert Time.now - t < 0.1
+
+    st.join
+  end
+
+  def test_2args
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    assert_equal 7, @client.add(3, 4)
 
     st.join
   end
