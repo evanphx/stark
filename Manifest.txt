@@ -8,6 +8,7 @@ lib/stark.rb
 lib/stark/ast.rb
 lib/stark/client.rb
 lib/stark/converters.rb
+lib/stark/exception.rb
 lib/stark/field.rb
 lib/stark/log_transport.rb
 lib/stark/parser.rb
