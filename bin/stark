@@ -20,4 +20,4 @@ end
 
 ruby = Stark::Ruby.new out
 
-ast.each { |i| i.accept ruby }
+ruby.run ast

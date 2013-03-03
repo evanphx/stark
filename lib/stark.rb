@@ -23,8 +23,7 @@ module Stark
     stream = StringIO.new
 
     ruby = Stark::Ruby.new stream
-
-    ast.each { |i| i.accept ruby }
+    ruby.run ast
 
     namespace.module_eval stream.string
   end

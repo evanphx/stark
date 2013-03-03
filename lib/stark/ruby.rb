@@ -21,8 +21,22 @@ module Stark
       o "require 'stark/exception'"
     end
 
+    def run(ast)
+      ast.each { |a| a.accept self }
+      close
+    end
+
+    def close
+      if @namespace
+        outdent
+        o "end"
+      end
+    end
+
     def process_namespace(ns)
       @namespace = ns.namespace if ns.lang == "rb"
+      o "module #{ns.namespace}"
+      indent
     end
 
     def process_include(inc)

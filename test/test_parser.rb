@@ -191,6 +191,17 @@ EOM
     assert_equal ["FOO", "BAR", "BAZ"], o.first.values
   end
 
+  def test_namespace
+    o = parse <<-EOM
+namespace rb Blah
+    EOM
+
+    ns = o.first
+
+    assert_equal "rb", ns.lang
+    assert_equal "Blah", ns.namespace
+  end
+
   def test_spec
     data = File.read "test/ThriftSpec.thrift"
 
