@@ -1,3 +1,9 @@
+=== 0.6.1 / 2013-03-02
+
+* 1 bugfix:
+
+  * Add missing file
+
 === 0.6.0 / 2013-03-02
 
 * 5 bugfixes:
