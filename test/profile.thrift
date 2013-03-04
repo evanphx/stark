@@ -4,6 +4,11 @@ struct UserProfile {
   3: string blurb
 }
 
+struct UserStatus {
+  1: UserProfile profile,
+  2: bool active
+}
+
 enum Status {
   ON
   OFF
@@ -26,6 +31,8 @@ service UserStorage {
   Status last_status(),
   i32 volume_up() throws (1: RockTooHard exc),
   oneway void make_bitcoins(),
-  i32 add(1: i32 a, 2: i32 b)
+  i32 add(1: i32 a, 2: i32 b),
+  UserStatus user_status(),
+  void set_user_status(1: UserStatus stat)
 }
 

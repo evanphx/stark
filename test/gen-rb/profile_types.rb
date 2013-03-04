@@ -34,6 +34,24 @@ class UserProfile
   ::Thrift::Struct.generate_accessors self
 end
 
+class UserStatus
+  include ::Thrift::Struct, ::Thrift::Struct_Union
+  PROFILE = 1
+  ACTIVE = 2
+
+  FIELDS = {
+    PROFILE => {:type => ::Thrift::Types::STRUCT, :name => 'profile', :class => UserProfile},
+    ACTIVE => {:type => ::Thrift::Types::BOOL, :name => 'active'}
+  }
+
+  def struct_fields; FIELDS; end
+
+  def validate
+  end
+
+  ::Thrift::Struct.generate_accessors self
+end
+
 class RockTooHard < ::Thrift::Exception
   include ::Thrift::Struct, ::Thrift::Struct_Union
   VOLUME = 1

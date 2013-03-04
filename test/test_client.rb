@@ -35,9 +35,10 @@ class TestClient < Test::Unit::TestCase
       @last_list = nil
       @last_status = nil
       @n = n
+      @user_status = nil
     end
 
-    attr_accessor :last_map, :last_list, :last_status
+    attr_accessor :last_map, :last_list, :last_status, :user_status
 
     def store(obj)
       @users[obj.uid] = obj
@@ -69,6 +70,10 @@ class TestClient < Test::Unit::TestCase
 
     def add(a,b)
       a + b
+    end
+
+    def set_user_status(s)
+      @user_status = s
     end
   end
 
@@ -233,6 +238,52 @@ class TestClient < Test::Unit::TestCase
     end
 
     assert_equal 7, @client.add(3, 4)
+
+    st.join
+  end
+
+  def test_read_struct_in_a_struct
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    prof = UserProfile.new 'uid' => 0, 'name' => 'root', 'blurb' => 'god'
+    stat = UserStatus.new 'profile' => prof, 'active' => true
+
+    @handler.user_status = stat
+
+    status = @client.user_status
+
+    assert_equal true, status.active
+    
+    prof = status.profile
+
+    assert_equal 0, prof.uid
+    assert_equal "root", prof.name
+    assert_equal "god", prof.blurb
+
+    st.join
+  end
+
+  def test_write_struct_in_a_struct
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    prof = @n::UserProfile.new 'uid' => 0, 'name' => 'root', 'blurb' => 'god'
+    stat = @n::UserStatus.new 'profile' => prof, 'active' => true
+
+    @client.set_user_status stat
+
+    status = @handler.user_status
+
+    assert_equal true, status.active
+    
+    prof = status.profile
+
+    assert_equal 0, prof.uid
+    assert_equal "root", prof.name
+    assert_equal "god", prof.blurb
 
     st.join
   end

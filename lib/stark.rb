@@ -25,6 +25,10 @@ module Stark
     ruby = Stark::Ruby.new stream
     ruby.run ast
 
+    if ENV['STARK_DEBUG']
+      puts stream.string
+    end
+
     namespace.module_eval stream.string
   end
 end

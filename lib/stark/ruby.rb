@@ -64,13 +64,19 @@ module Stark
       o "Fields = {"
       indent
 
-      str.fields.each do |f|
-        c = "Stark::Converters::#{f.type.upcase}"
+      fields = str.fields.map do |f|
+        if BUILTINS.include? f.type.downcase
+          c = "Stark::Converters::#{f.type.upcase}"
+        elsif desc = @structs[f.type]
+          c = "Stark::Converters::Struct.new(#{f.type})"
+        else
+          raise "Blah"
+        end
 
-        o "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c}),"
+        "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c})"
       end
 
-      o ":count => #{str.fields.size}"
+      o "   #{fields.join(', ')}"
 
       outdent
       o "}"
@@ -84,6 +90,8 @@ module Stark
 
     end
 
+    BUILTINS = %w!bool byte i16 i32 i64 double string!
+
     def process_exception(str)
       @exceptions[str.name] = str
 
@@ -96,7 +104,13 @@ module Stark
       indent
 
       str.fields.each do |f|
-        c = "Stark::Converters::#{f.type.upcase}"
+        if BUILTINS.include? f.type.downcase
+          c = "Stark::Converters::#{f.type.upcase}"
+        elsif desc = @structs[f.type]
+          c = "Stark::Converters::Struct.new(#{f.type})"
+        else
+          raise "Blah"
+        end
 
         o "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c}),"
       end
@@ -207,6 +221,7 @@ module Stark
       desc.fields.each do |f|
         if desc = @structs[f.type]
           o "op.write_field_begin '#{f.name}', ::Thrift::Types::STRUCT, #{f.index}"
+          o "#{f.name} = #{obj}.#{f.name}"
           output_struct desc, f.name
           o "op.write_field_end"
         else

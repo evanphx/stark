@@ -165,6 +165,35 @@ module UserStorage
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'add failed: unknown result')
     end
 
+    def user_status()
+      send_user_status()
+      return recv_user_status()
+    end
+
+    def send_user_status()
+      send_message('user_status', User_status_args)
+    end
+
+    def recv_user_status()
+      result = receive_message(User_status_result)
+      return result.success unless result.success.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'user_status failed: unknown result')
+    end
+
+    def set_user_status(stat)
+      send_set_user_status(stat)
+      recv_set_user_status()
+    end
+
+    def send_set_user_status(stat)
+      send_message('set_user_status', Set_user_status_args, :stat => stat)
+    end
+
+    def recv_set_user_status()
+      result = receive_message(Set_user_status_result)
+      return
+    end
+
   end
 
   class Processor
@@ -248,6 +277,20 @@ module UserStorage
       result = Add_result.new()
       result.success = @handler.add(args.a, args.b)
       write_result(result, oprot, 'add', seqid)
+    end
+
+    def process_user_status(seqid, iprot, oprot)
+      args = read_args(iprot, User_status_args)
+      result = User_status_result.new()
+      result.success = @handler.user_status()
+      write_result(result, oprot, 'user_status', seqid)
+    end
+
+    def process_set_user_status(seqid, iprot, oprot)
+      args = read_args(iprot, Set_user_status_args)
+      result = Set_user_status_result.new()
+      @handler.set_user_status(args.stat)
+      write_result(result, oprot, 'set_user_status', seqid)
     end
 
   end
@@ -596,6 +639,68 @@ module UserStorage
 
     FIELDS = {
       SUCCESS => {:type => ::Thrift::Types::I32, :name => 'success'}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class User_status_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class User_status_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::STRUCT, :name => 'success', :class => UserStatus}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_user_status_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    STAT = 1
+
+    FIELDS = {
+      STAT => {:type => ::Thrift::Types::STRUCT, :name => 'stat', :class => UserStatus}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_user_status_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
     }
 
     def struct_fields; FIELDS; end

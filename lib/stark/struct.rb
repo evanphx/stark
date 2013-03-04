@@ -15,6 +15,23 @@ module Stark
       end
     end
 
+    def read(ip)
+      ip.read_struct_begin
+
+      while true
+        _, ftype, fid = ip.read_field_begin
+        break if ftype == ::Thrift::Types::STOP
+
+        set_from_index ftype, fid, ip
+
+        ip.read_field_end
+      end
+
+      ip.read_struct_end
+
+      self
+    end
+
     def write_fields(op)
       self.class::Fields.each do |idx, field|
         next if idx == :count
