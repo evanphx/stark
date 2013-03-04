@@ -110,19 +110,12 @@ module Stark
       o "Fields = {"
       indent
 
-      str.fields.each do |f|
-        if BUILTINS.include? f.type.downcase
-          c = "Stark::Converters::#{f.type.upcase}"
-        elsif @structs[f.type]
-          c = "Stark::Converters::Struct.new(#{f.type})"
-        else
-          raise "Blah"
-        end
-
-        o "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c}),"
+      fields = str.fields.map do |f|
+        c = converter f.type
+        "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c})"
       end
 
-      o ":count => #{str.fields.size}"
+      o "   #{fields.join(', ')}"
 
       outdent
       o "}"
