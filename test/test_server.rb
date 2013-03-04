@@ -73,6 +73,11 @@ class TestServer < Test::Unit::TestCase
     def set_user_status(s)
       @user_status = s
     end
+
+    attr_accessor :user_relationship
+    def set_user_relationship(rel)
+      @user_relationship = rel
+    end
   end
 
   def test_store_and_retrieve
@@ -274,6 +279,40 @@ class TestServer < Test::Unit::TestCase
     assert_equal 0, prof.uid
     assert_equal "root", prof.name
     assert_equal "god", prof.blurb
+
+    st.join
+  end
+
+  def test_read_enum_in_struct
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    stat = @n::UserRelationship.new 'user' => 0, 'status' => :ITS_COMPLICATED
+
+    @handler.user_relationship = stat
+
+    rel = @client.user_relationship
+
+    assert_equal 0, rel.user
+    assert_equal :ITS_COMPLICATED, rel.status
+
+    st.join
+  end
+
+  def test_write_enum_in_struct
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    stat = @n::UserRelationship.new 'user' => 0, 'status' => :ITS_COMPLICATED
+
+    @client.set_user_relationship stat
+
+    rel = @handler.user_relationship
+
+    assert_equal 0, rel.user
+    assert_equal :ITS_COMPLICATED, rel.status
 
     st.join
   end

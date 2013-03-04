@@ -194,6 +194,35 @@ module UserStorage
       return
     end
 
+    def user_relationship()
+      send_user_relationship()
+      return recv_user_relationship()
+    end
+
+    def send_user_relationship()
+      send_message('user_relationship', User_relationship_args)
+    end
+
+    def recv_user_relationship()
+      result = receive_message(User_relationship_result)
+      return result.success unless result.success.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'user_relationship failed: unknown result')
+    end
+
+    def set_user_relationship(rel)
+      send_set_user_relationship(rel)
+      recv_set_user_relationship()
+    end
+
+    def send_set_user_relationship(rel)
+      send_message('set_user_relationship', Set_user_relationship_args, :rel => rel)
+    end
+
+    def recv_set_user_relationship()
+      result = receive_message(Set_user_relationship_result)
+      return
+    end
+
   end
 
   class Processor
@@ -291,6 +320,20 @@ module UserStorage
       result = Set_user_status_result.new()
       @handler.set_user_status(args.stat)
       write_result(result, oprot, 'set_user_status', seqid)
+    end
+
+    def process_user_relationship(seqid, iprot, oprot)
+      args = read_args(iprot, User_relationship_args)
+      result = User_relationship_result.new()
+      result.success = @handler.user_relationship()
+      write_result(result, oprot, 'user_relationship', seqid)
+    end
+
+    def process_set_user_relationship(seqid, iprot, oprot)
+      args = read_args(iprot, Set_user_relationship_args)
+      result = Set_user_relationship_result.new()
+      @handler.set_user_relationship(args.rel)
+      write_result(result, oprot, 'set_user_relationship', seqid)
     end
 
   end
@@ -697,6 +740,68 @@ module UserStorage
   end
 
   class Set_user_status_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class User_relationship_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class User_relationship_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::STRUCT, :name => 'success', :class => UserRelationship}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_user_relationship_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    REL = 1
+
+    FIELDS = {
+      REL => {:type => ::Thrift::Types::STRUCT, :name => 'rel', :class => UserRelationship}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_user_relationship_result
     include ::Thrift::Struct, ::Thrift::Struct_Union
 
     FIELDS = {

@@ -69,8 +69,11 @@ module Stark
           c = "Stark::Converters::#{f.type.upcase}"
         elsif desc = @structs[f.type]
           c = "Stark::Converters::Struct.new(#{f.type})"
+        elsif desc = @enums[f.type]
+          c = "Stark::Converters::Enum.new(Enum_#{f.type})"
         else
           raise "Blah"
+
         end
 
         "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c})"
@@ -106,7 +109,7 @@ module Stark
       str.fields.each do |f|
         if BUILTINS.include? f.type.downcase
           c = "Stark::Converters::#{f.type.upcase}"
-        elsif desc = @structs[f.type]
+        elsif @structs[f.type]
           c = "Stark::Converters::Struct.new(#{f.type})"
         else
           raise "Blah"
@@ -223,6 +226,10 @@ module Stark
           o "op.write_field_begin '#{f.name}', ::Thrift::Types::STRUCT, #{f.index}"
           o "#{f.name} = #{obj}.#{f.name}"
           output_struct desc, f.name
+          o "op.write_field_end"
+        elsif desc = @enums[f.type]
+          o "op.write_field_begin '#{f.name}', ::Thrift::Types::I32, #{f.index}"
+          o "op.write_i32 Enum_#{desc.name}[#{obj}.#{f.name}.to_sym]"
           o "op.write_field_end"
         else
           o "op.write_field_begin '#{f.name}', #{type(f.type)}, #{f.index}"

@@ -5,6 +5,16 @@
 #
 
 
+module MaritalStatus
+  SINGLE = 0
+  MARRIED = 1
+  DIVORCED = 2
+  UPSIDEDOWN = 3
+  ITS_COMPLICATED = 4
+  VALUE_MAP = {0 => "SINGLE", 1 => "MARRIED", 2 => "DIVORCED", 3 => "UPSIDEDOWN", 4 => "ITS_COMPLICATED"}
+  VALID_VALUES = Set.new([SINGLE, MARRIED, DIVORCED, UPSIDEDOWN, ITS_COMPLICATED]).freeze
+end
+
 module Status
   ON = 0
   OFF = 1
@@ -47,6 +57,27 @@ class UserStatus
   def struct_fields; FIELDS; end
 
   def validate
+  end
+
+  ::Thrift::Struct.generate_accessors self
+end
+
+class UserRelationship
+  include ::Thrift::Struct, ::Thrift::Struct_Union
+  USER = 1
+  STATUS = 2
+
+  FIELDS = {
+    USER => {:type => ::Thrift::Types::I32, :name => 'user'},
+    STATUS => {:type => ::Thrift::Types::I32, :name => 'status', :enum_class => MaritalStatus}
+  }
+
+  def struct_fields; FIELDS; end
+
+  def validate
+    unless @status.nil? || MaritalStatus::VALID_VALUES.include?(@status)
+      raise ::Thrift::ProtocolException.new(::Thrift::ProtocolException::UNKNOWN, 'Invalid value of field status!')
+    end
   end
 
   ::Thrift::Struct.generate_accessors self

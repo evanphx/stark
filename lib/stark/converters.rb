@@ -132,5 +132,24 @@ module Stark
         value.write op
       end
     end
+
+    class Enum
+      def initialize(cls)
+        @class = cls
+      end
+
+      def type
+        Thrift::Types::I32
+      end
+
+      def read(ip)
+        @class[ip.read_i32]
+      end
+
+      def write(op, value)
+        op.write_i32 @class[value]
+      end
+
+    end
   end
 end

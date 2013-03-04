@@ -4,9 +4,22 @@ struct UserProfile {
   3: string blurb
 }
 
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  UPSIDEDOWN
+  ITS_COMPLICATED
+}
+
 struct UserStatus {
   1: UserProfile profile,
   2: bool active
+}
+
+struct UserRelationship {
+  1: i32 user,
+  2: MaritalStatus status
 }
 
 enum Status {
@@ -33,6 +46,8 @@ service UserStorage {
   oneway void make_bitcoins(),
   i32 add(1: i32 a, 2: i32 b),
   UserStatus user_status(),
-  void set_user_status(1: UserStatus stat)
+  void set_user_status(1: UserStatus stat),
+  UserRelationship user_relationship(),
+  void set_user_relationship(1: UserRelationship rel)
 }
 
