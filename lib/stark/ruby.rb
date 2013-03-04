@@ -258,8 +258,6 @@ module Stark
         o "op.write_field_begin '#{name}', #{type(ft)}, #{idx}"
         o "op.#{write_func(ft)} #{name}"
         o "op.write_field_end"
-      else
-        raise "Unknown field type: #{ft}"
       end
 
     end
@@ -268,23 +266,8 @@ module Stark
       o "op.write_struct_begin '#{desc.name}'"
 
       desc.fields.each do |f|
-        if desc = @structs[f.type]
-          o "op.write_field_begin '#{f.name}', ::Thrift::Types::STRUCT, #{f.index}"
-          o "#{f.name} = #{obj}.#{f.name}"
-          output_struct desc, f.name
-          o "op.write_field_end"
-        elsif desc = @enums[f.type]
-          o "op.write_field_begin '#{f.name}', ::Thrift::Types::I32, #{f.index}"
-          o "op.write_i32 Enum_#{desc.name}[#{obj}.#{f.name}.to_sym]"
-          o "op.write_field_end"
-        else
-          o "#{f.name} = #{obj}.#{f.name}"
-          write_field f.type, f.name, f.index
-        # else
-          # o "op.write_field_begin '#{f.name}', #{type(f.type)}, #{f.index}"
-          # o "op.#{write_func(f.type)} #{obj}.#{f.name}"
-          # o "op.write_field_end"
-        end
+        o "#{f.name} = #{obj}.#{f.name}"
+        write_field f.type, f.name, f.index
       end
 
       o "op.write_field_stop"
@@ -395,42 +378,7 @@ module Stark
 
         ft = func.return_type
 
-        if desc = @structs[ft]
-          o "op.write_field_begin 'result', ::Thrift::Types::STRUCT, 0"
-          output_struct desc, "result"
-          o "op.write_field_end"
-        elsif desc = @enums[ft]
-          o "op.write_field_begin 'result', ::Thrift::Types::I32, 0"
-          o "op.write_i32 Enum_#{desc.name}[result.to_sym]"
-
-          o "op.write_field_end"
-        elsif ft.kind_of? Stark::Parser::AST::Map
-          o "result = hash_cast result"
-          o "op.write_field_begin 'result', ::Thrift::Types::MAP, 0"
-          o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, result.size)"
-
-          o "result.each do |k,v|"
-          indent
-          o "op.#{write_func(ft.key)} k"
-          o "op.#{write_func(ft.value)} v"
-          outdent
-          o "end"
-
-          o "op.write_map_end"
-          o "op.write_field_end"
-        elsif ft.kind_of? Stark::Parser::AST::List
-          o "result = Array(result)"
-          o "op.write_field_begin 'result', ::Thrift::Types::LIST, 0"
-          o "op.write_list_begin(#{wire_type(ft.value)}, result.size)"
-          o "result.each { |v| op.#{write_func(ft.value)}(v) }"
-          o "op.write_list_end"
-
-          o "op.write_field_end"
-        elsif ft != "void"
-          o "op.write_field_begin 'result', #{type(ft)}, 0"
-          o "op.#{write_func(ft)} result"
-          o "op.write_field_end"
-        end
+        write_field ft, 'result', 0
 
         o "op.write_field_stop"
         o "op.write_struct_end"
@@ -478,42 +426,7 @@ module Stark
         o "op.write_struct_begin \"#{func.name}_args\""
 
         Array(func.arguments).each do |arg|
-          if desc = @structs[arg.type]
-            o "op.write_field_begin '#{arg.name}', ::Thrift::Types::STRUCT, #{arg.index}"
-            output_struct desc, arg.name
-            o "op.write_field_end"
-          elsif desc = @enums[arg.type]
-            o "op.write_field_begin '#{arg.name}', ::Thrift::Types::I32, #{arg.index}"
-            o "op.write_i32 Enum_#{desc.name}[#{arg.name}.to_sym]"
-
-            o "op.write_field_end"
-          elsif arg.type.kind_of? Stark::Parser::AST::Map
-            o "#{arg.name} = hash_cast #{arg.name}"
-            o "op.write_field_begin '#{arg.name}', ::Thrift::Types::MAP, #{arg.index}"
-            o "op.write_map_begin(#{wire_type(arg.type.key)}, #{wire_type(arg.type.value)}, #{arg.name}.size)"
-
-            o "#{arg.name}.each do |k,v|"
-            indent
-            o "op.#{write_func(arg.type.key)} k"
-            o "op.#{write_func(arg.type.value)} v"
-            outdent
-            o "end"
-
-            o "op.write_map_end"
-            o "op.write_field_end"
-          elsif arg.type.kind_of? Stark::Parser::AST::List
-            o "#{arg.name} = Array(#{arg.name})"
-            o "op.write_field_begin '#{arg.name}', ::Thrift::Types::LIST, #{arg.index}"
-            o "op.write_list_begin(#{wire_type(arg.type.value)}, #{arg.name}.size)"
-            o "#{arg.name}.each { |v| op.#{write_func(arg.type.value)}(v) }"
-            o "op.write_list_end"
-
-            o "op.write_field_end"
-          elsif arg.type != "void"
-            o "op.write_field_begin '#{arg.name}', #{type(arg.type)}, #{arg.index}"
-            o "op.#{write_func(arg.type)} #{arg.name}"
-            o "op.write_field_end"
-          end
+          write_field arg.type, arg.name, arg.index
         end
 
         o "op.write_field_stop"
