@@ -149,6 +149,39 @@ module Stark
       def write(op, value)
         op.write_i32 @class[value]
       end
+    end
+
+    class List
+      def initialize(value)
+        @value = value
+      end
+
+      def type
+        Thrift::Types::LIST
+      end
+
+      def read(ip)
+        vt, size = ip.read_list_begin
+
+        if vt != @value.type
+          raise TypeError, "List expected to be type: #{@value.type}"
+        end
+
+        v = @value
+
+        Array.new(size) { v.read(ip) }
+      end
+
+      def write(op, value)
+        value = Array(value)
+
+        op.write_list_begin @value.type, value.size
+
+        c = @value
+        value.each { |v| c.write op, v }
+
+        op.write_list_end
+      end
 
     end
   end

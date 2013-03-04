@@ -83,6 +83,24 @@ class UserRelationship
   ::Thrift::Struct.generate_accessors self
 end
 
+class UserFriends
+  include ::Thrift::Struct, ::Thrift::Struct_Union
+  USER = 1
+  FRIENDS = 2
+
+  FIELDS = {
+    USER => {:type => ::Thrift::Types::I32, :name => 'user'},
+    FRIENDS => {:type => ::Thrift::Types::LIST, :name => 'friends', :element => {:type => ::Thrift::Types::I32}}
+  }
+
+  def struct_fields; FIELDS; end
+
+  def validate
+  end
+
+  ::Thrift::Struct.generate_accessors self
+end
+
 class RockTooHard < ::Thrift::Exception
   include ::Thrift::Struct, ::Thrift::Struct_Union
   VOLUME = 1

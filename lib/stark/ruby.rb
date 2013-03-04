@@ -56,6 +56,20 @@ module Stark
       @enums[enum.name] = enum
     end
 
+    def converter(t)
+      if t.kind_of? Stark::Parser::AST::List
+        "Stark::Converters::List.new(#{converter(t.value)})"
+      elsif BUILTINS.include? t.downcase
+        "Stark::Converters::#{t.upcase}"
+      elsif desc = @structs[t]
+        "Stark::Converters::Struct.new(#{t})"
+      elsif desc = @enums[t]
+        "Stark::Converters::Enum.new(Enum_#{t})"
+      else
+        raise "Blah"
+      end
+    end
+
     def process_struct(str)
       @structs[str.name] = str
 
@@ -65,17 +79,7 @@ module Stark
       indent
 
       fields = str.fields.map do |f|
-        if BUILTINS.include? f.type.downcase
-          c = "Stark::Converters::#{f.type.upcase}"
-        elsif desc = @structs[f.type]
-          c = "Stark::Converters::Struct.new(#{f.type})"
-        elsif desc = @enums[f.type]
-          c = "Stark::Converters::Enum.new(Enum_#{f.type})"
-        else
-          raise "Blah"
-
-        end
-
+        c = converter f.type
         "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c})"
       end
 
@@ -218,6 +222,48 @@ module Stark
       WriteFunc[t] || raise("unknown type - #{t}")
     end
 
+    def write_field(ft, name, idx)
+      if desc = @structs[ft]
+        o "op.write_field_begin '#{name}', ::Thrift::Types::STRUCT, #{idx}"
+        output_struct desc, name
+        o "op.write_field_end"
+      elsif desc = @enums[ft]
+        o "op.write_field_begin '#{name}', ::Thrift::Types::I32, #{idx}"
+        o "op.write_i32 Enum_#{desc.name}[#{name}.to_sym]"
+
+        o "op.write_field_end"
+      elsif ft.kind_of? Stark::Parser::AST::Map
+        o "#{name} = hash_cast #{name}"
+        o "op.write_field_begin '#{name}', ::Thrift::Types::MAP, #{idx}"
+        o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, #{name}.size)"
+
+        o "#{name}.each do |k,v|"
+        indent
+        o "op.#{write_func(ft.key)} k"
+        o "op.#{write_func(ft.value)} v"
+        outdent
+        o "end"
+
+        o "op.write_map_end"
+        o "op.write_field_end"
+      elsif ft.kind_of? Stark::Parser::AST::List
+        o "#{name} = Array(#{name})"
+        o "op.write_field_begin '#{name}', ::Thrift::Types::LIST, #{idx}"
+        o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
+        o "#{name}.each { |v| op.#{write_func(ft.value)}(v) }"
+        o "op.write_list_end"
+
+        o "op.write_field_end"
+      elsif ft != "void"
+        o "op.write_field_begin '#{name}', #{type(ft)}, #{idx}"
+        o "op.#{write_func(ft)} #{name}"
+        o "op.write_field_end"
+      else
+        raise "Unknown field type: #{ft}"
+      end
+
+    end
+
     def output_struct(desc, obj)
       o "op.write_struct_begin '#{desc.name}'"
 
@@ -232,9 +278,12 @@ module Stark
           o "op.write_i32 Enum_#{desc.name}[#{obj}.#{f.name}.to_sym]"
           o "op.write_field_end"
         else
-          o "op.write_field_begin '#{f.name}', #{type(f.type)}, #{f.index}"
-          o "op.#{write_func(f.type)} #{obj}.#{f.name}"
-          o "op.write_field_end"
+          o "#{f.name} = #{obj}.#{f.name}"
+          write_field f.type, f.name, f.index
+        # else
+          # o "op.write_field_begin '#{f.name}', #{type(f.type)}, #{f.index}"
+          # o "op.#{write_func(f.type)} #{obj}.#{f.name}"
+          # o "op.write_field_end"
         end
       end
 

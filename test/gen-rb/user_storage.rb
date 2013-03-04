@@ -223,6 +223,35 @@ module UserStorage
       return
     end
 
+    def user_friends()
+      send_user_friends()
+      return recv_user_friends()
+    end
+
+    def send_user_friends()
+      send_message('user_friends', User_friends_args)
+    end
+
+    def recv_user_friends()
+      result = receive_message(User_friends_result)
+      return result.success unless result.success.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'user_friends failed: unknown result')
+    end
+
+    def set_user_friends(fr)
+      send_set_user_friends(fr)
+      recv_set_user_friends()
+    end
+
+    def send_set_user_friends(fr)
+      send_message('set_user_friends', Set_user_friends_args, :fr => fr)
+    end
+
+    def recv_set_user_friends()
+      result = receive_message(Set_user_friends_result)
+      return
+    end
+
   end
 
   class Processor
@@ -334,6 +363,20 @@ module UserStorage
       result = Set_user_relationship_result.new()
       @handler.set_user_relationship(args.rel)
       write_result(result, oprot, 'set_user_relationship', seqid)
+    end
+
+    def process_user_friends(seqid, iprot, oprot)
+      args = read_args(iprot, User_friends_args)
+      result = User_friends_result.new()
+      result.success = @handler.user_friends()
+      write_result(result, oprot, 'user_friends', seqid)
+    end
+
+    def process_set_user_friends(seqid, iprot, oprot)
+      args = read_args(iprot, Set_user_friends_args)
+      result = Set_user_friends_result.new()
+      @handler.set_user_friends(args.fr)
+      write_result(result, oprot, 'set_user_friends', seqid)
     end
 
   end
@@ -802,6 +845,68 @@ module UserStorage
   end
 
   class Set_user_relationship_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class User_friends_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+
+    FIELDS = {
+
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class User_friends_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::STRUCT, :name => 'success', :class => UserFriends}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_user_friends_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    FR = 1
+
+    FIELDS = {
+      FR => {:type => ::Thrift::Types::STRUCT, :name => 'fr', :class => UserFriends}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Set_user_friends_result
     include ::Thrift::Struct, ::Thrift::Struct_Union
 
     FIELDS = {

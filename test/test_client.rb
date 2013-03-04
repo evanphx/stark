@@ -81,6 +81,11 @@ class TestClient < Test::Unit::TestCase
     def set_user_relationship(rel)
       @user_relationship = rel
     end
+
+    attr_accessor :user_friends
+    def set_user_friends(fr)
+      @user_friends = fr
+    end
   end
 
   def test_store_and_retrieve
@@ -324,6 +329,40 @@ class TestClient < Test::Unit::TestCase
 
     assert_equal 0, rel.user
     assert_equal 4, rel.status
+
+    st.join
+  end
+
+  def test_read_list_in_struct
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    stat = UserFriends.new 'user' => 0, 'friends' => [4,8,47]
+
+    @handler.user_friends = stat
+
+    rel = @client.user_friends
+
+    assert_equal 0, rel.user
+    assert_equal [4,8,47], rel.friends
+
+    st.join
+  end
+
+  def test_write_list_in_struct
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    stat = @n::UserFriends.new 'user' => 0, 'friends' => [4,8,47]
+
+    @client.set_user_friends stat
+
+    rel = @handler.user_friends
+
+    assert_equal 0, rel.user
+    assert_equal [4,8,47], rel.friends
 
     st.join
   end
