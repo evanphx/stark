@@ -13,8 +13,12 @@ Optimized thrift bindings for ruby
 
 == SYNOPSIS:
 
-  $ stark service.thrift > service.rb
+  $ stark service.thrift service.rb
   require 'service'
+
+  OR
+
+  Stark.materialize "service.thrift"
 
   Use Service::Client and Service::Processor like the default thrift
   docs describe them.
