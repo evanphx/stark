@@ -1,7 +1,7 @@
 require 'thrift'
 
 module Stark
-  VERSION = '0.6.1'
+  VERSION = '0.7.0'
 
   def self.pipe_transport
     cr, cw = IO.pipe
