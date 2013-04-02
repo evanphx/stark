@@ -11,6 +11,7 @@ Hoe.spec 'stark' do
   developer('Evan Phoenix', 'evan@phx.io')
 
   dependency "thrift", "~> 0.9.0"
+  readme_file = "README.md"
 end
 
 task :parser do
