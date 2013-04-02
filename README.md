@@ -1,17 +1,17 @@
-= stark
+# stark
 
 * http://github.com/evanphx/stark
 
-== DESCRIPTION:
+## DESCRIPTION:
 
 Optimized thrift bindings for ruby
 
-== FEATURES/PROBLEMS:
+## FEATURES/PROBLEMS:
 
 * Generates much more straightforward code for thrift clients and servers
   than the default thrift bindings for ruby
 
-== SYNOPSIS:
+## SYNOPSIS:
 
   $ stark service.thrift service.rb
   require 'service'
@@ -23,16 +23,16 @@ Optimized thrift bindings for ruby
   Use Service::Client and Service::Processor like the default thrift
   docs describe them.
 
-== REQUIREMENTS:
+## REQUIREMENTS:
 
 * thrift gem
 * .thift files
 
-== INSTALL:
+## INSTALL:
 
 * gem install stark
 
-== DEVELOPERS:
+## DEVELOPERS:
 
 After checking out the source, run:
 
@@ -41,7 +41,7 @@ After checking out the source, run:
 This task will install any missing dependencies, run the tests/specs,
 and generate the RDoc.
 
-== LICENSE:
+## LICENSE:
 
 (The MIT License)
 
