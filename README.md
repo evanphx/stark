@@ -4,29 +4,37 @@
 
 ## DESCRIPTION:
 
-Optimized thrift bindings for ruby
+Optimized thrift bindings for ruby.
 
 ## FEATURES/PROBLEMS:
 
 * Generates much more straightforward code for thrift clients and servers
-  than the default thrift bindings for ruby
+  than the default thrift bindings for ruby.
 
 ## SYNOPSIS:
 
+```
   $ stark service.thrift service.rb
+```
+
+```ruby
   require 'service'
+```
 
   OR
 
+```ruby
   Stark.materialize "service.thrift"
+```
 
-  Use Service::Client and Service::Processor like the default thrift
+  Use `Service::Client` and
+[`Service::Processor`](http://thrift.apache.org/docs/concepts/) like the default thrift
   docs describe them.
 
 ## REQUIREMENTS:
 
 * thrift gem
-* .thift files
+* .thrift files
 
 ## INSTALL:
 
@@ -36,7 +44,9 @@ Optimized thrift bindings for ruby
 
 After checking out the source, run:
 
+```
   $ rake newb
+```
 
 This task will install any missing dependencies, run the tests/specs,
 and generate the RDoc.
