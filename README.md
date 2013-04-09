@@ -40,6 +40,93 @@ Optimized thrift bindings for ruby.
 
 * gem install stark
 
+
+## More in depth
+
+The two main advantages of using Stark are that it allows you to not
+have to convert thrift files ahead of time and the generated Ruby code is of
+higher quality than the output of the Thrift Ruby gem.
+
+### How to
+
+When using `Stark.materialize` on a `.thrift` file, the file gets parsed
+and converted into Ruby code that is available right away for you to
+use.
+
+Lets take this example thrift file:
+
+```
+struct User {
+  1: required i32 id
+  2: string firstName
+  3: string lastName
+}
+
+exception UserNotFound {
+  1: i32 errorCode
+  2: string errorMessage
+}
+
+service GetUser {
+  User fetchUser(1: string email) throws (1: UserNotFound e)
+}
+```
+
+Stark will generate the equivalent of the following code:
+
+```ruby
+class User < Stark::Struct
+  attr_reader :id, :firstName, :lastName
+end
+
+class UserNotFound < Stark::Exception
+  attr_reader :errorCode, :errorMessage
+end
+
+module GetUser
+
+  class Client < Stark::Client
+    def fetchUser(email)
+      # code to make the RPC call, handle errors etc..
+    end
+  end
+
+  class Processor < Stark::Processor
+    def process_fetchUser(seqid, ip, op)
+    end
+  end
+
+end
+```
+
+#### Namespacing
+
+While the generated code above is great, it might conflict with code you
+already have in your application. To avoid conflicts, you can namespace
+your materialized thrift examples.
+
+```ruby
+module MyApp; end
+Stark.materialize "example.thrift", MyApp
+```
+
+The newly generated `GetUser` class is now generated under the provided
+namespace: `MyApp::GetUser`.
+
+Note that materializing a thrift file from within a module or a class
+will still generate the code at the top level unless you specify a 
+namespace.
+
+
+### Debugging
+
+Spark will output some valuable (albeit verbose) debugging information
+if you set the `STARK_DEBUG` environment variable.
+
+```
+$ STARK_DEBUG=true ruby code_using_stark.rb
+``` 
+
 ## DEVELOPERS:
 
 After checking out the source, run:
