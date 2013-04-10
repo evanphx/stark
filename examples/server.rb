@@ -1,5 +1,7 @@
 require 'thrift'
-require 'health'
+require 'stark'
+
+Stark.materialize "examples/health.thrift"
 
 class Health::Handler
 

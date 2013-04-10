@@ -1,5 +1,7 @@
 require 'thrift'
-require 'health'
+require 'stark'
+
+Stark.materialize "examples/health.thrift"
 
 socket    = Thrift::UNIXSocket.new('/tmp/health_sock').tap { |s| s.open }
 transport = Thrift::IOStreamTransport.new socket.to_io, socket.to_io
