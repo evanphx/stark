@@ -45,4 +45,23 @@ enum Status {
     ns = create_ns_module 'Blah.Blerg', 'c'
     assert ns::Enum_Status
   end
+
+  def test_forward_declaration
+    ast = Stark::Parser.ast <<-EOM
+struct Foo {
+  1: Bar bar
+}
+
+struct Bar {
+  1: i32 ids
+}
+  EOM
+
+    stream = StringIO.new
+    ruby = Stark::Ruby.new stream
+    e = assert_raise RuntimeError do
+      ruby.run ast
+    end
+    assert_equal 'Unknown type <Bar>', e.message
+  end
 end
