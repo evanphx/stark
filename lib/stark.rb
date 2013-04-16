@@ -21,7 +21,7 @@ module Stark
     begin
       ast = Stark::Parser.ast File.read(file)
     rescue => e
-      raise e, e.message + " while processing #{file}"
+      raise e, e.message + " while processing #{file} -\n#{e.backtrace.join("\n")}"
     end
 
     stream = StringIO.new
