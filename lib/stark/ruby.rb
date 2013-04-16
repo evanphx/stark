@@ -13,6 +13,7 @@ module Stark
       @stream = stream
 
 
+      o "require 'set'"
       o "require 'stark/client'"
       o "require 'stark/struct'"
       o "require 'stark/field'"
