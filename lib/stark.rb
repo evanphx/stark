@@ -18,7 +18,11 @@ module Stark
     require 'stark/ruby'
     require 'stringio'
 
-    ast = Stark::Parser.ast File.read(file)
+    begin
+      ast = Stark::Parser.ast File.read(file)
+    rescue => e
+      raise e, e.message + " while processing #{file}"
+    end
 
     stream = StringIO.new
 
