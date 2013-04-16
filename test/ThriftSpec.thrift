@@ -181,3 +181,7 @@ struct NestedMapInMapKey {
 struct NestedMapInMapValue {
   2: map<byte, map<byte, byte>> value
 }
+
+service HelloService {
+  list<Hello> all()
+}

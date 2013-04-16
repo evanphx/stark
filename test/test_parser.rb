@@ -56,6 +56,17 @@ struct Foo {
     EOM
   end
 
+  def test_list_with_struct
+    parse <<-EOM
+struct Foo {
+  1: i32 uid
+}
+struct Bar {
+  1: list<Foo> foos
+}
+    EOM
+  end
+
   include Stark::Parser::AST
 
   def comment(text)
@@ -355,5 +366,55 @@ namespace rb Blah
     assert_field fs[0], 1, "My_union", "fun_union"
     assert_field fs[1], 2, "i32", "integer32"
     assert_field fs[2], 3, "string", "some_characters"
+
+    s = ary.shift
+    assert_equal "StructWithEnumMap", s.name
+
+    s = ary.shift
+    # comment
+
+    s = ary.shift
+    assert_equal "NestedListInList", s.name
+
+    s = ary.shift
+    assert_equal "NestedListInSet", s.name
+
+    s = ary.shift
+    assert_equal "NestedListInMapKey", s.name
+
+    s = ary.shift
+    assert_equal "NestedListInMapValue", s.name
+
+    s = ary.shift # comment
+    s = ary.shift
+    assert_equal "NestedSetInList", s.name
+
+    s = ary.shift
+    assert_equal "NestedSetInSet", s.name
+
+    s = ary.shift
+    assert_equal "NestedSetInMapKey", s.name
+
+    s = ary.shift
+    assert_equal "NestedSetInMapValue", s.name
+
+    s = ary.shift # comment
+    s = ary.shift
+    assert_equal "NestedMapInList", s.name
+
+    s = ary.shift
+    assert_equal "NestedMapInSet", s.name
+
+    s = ary.shift
+    assert_equal "NestedMapInMapKey", s.name
+
+    s = ary.shift
+    assert_equal "NestedMapInMapValue", s.name
+
+    s = ary.shift
+    assert_equal "HelloService", s.name
+    fs = s.functions
+
+    assert_func fs[0], list("Hello"), "all", nil
   end
 end
