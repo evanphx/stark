@@ -3,9 +3,9 @@ require 'stark'
 require 'stark/ruby'
 
 class TestRuby < Test::Unit::TestCase
-  def test_namespace
+  def create_ns_module(name, lang = 'rb')
     ast = Stark::Parser.ast <<-EOM
-namespace rb Blah
+namespace #{lang} #{name}
 enum Status {
   DEAD
   ALIVE
@@ -20,8 +20,29 @@ enum Status {
     ns = Module.new
 
     ns.module_eval stream.string
+    ns
+  end
 
+  def test_namespace1
+    ns = create_ns_module 'Blah'
     assert ns::Blah
     assert ns::Blah::Enum_Status
+  end
+
+  def test_namespace2
+    ns = create_ns_module 'Blah.Blerg'
+    assert ns::Blah::Blerg
+    assert ns::Blah::Blerg::Enum_Status
+  end
+
+  def test_namespace3
+    ns = create_ns_module 'Blah.Blerg', '*'
+    assert ns::Blah::Blerg
+    assert ns::Blah::Blerg::Enum_Status
+  end
+
+  def test_namespace4
+    ns = create_ns_module 'Blah.Blerg', 'c'
+    assert ns::Enum_Status
   end
 end
