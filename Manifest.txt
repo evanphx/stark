@@ -1,9 +1,15 @@
 .autotest
+.gemtest
+.travis.yml
 History.txt
 Manifest.txt
 README.md
 Rakefile
 bin/stark
+examples/README.md
+examples/client.rb
+examples/health.thrift
+examples/server.rb
 lib/stark.rb
 lib/stark/ast.rb
 lib/stark/client.rb
