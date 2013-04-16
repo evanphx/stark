@@ -263,6 +263,20 @@ module Stark
         o "    handle_bad_list size"
         o "  end"
         o "  ip.read_list_end"
+      elsif t.kind_of? Stark::Parser::AST::Set
+        o "  vt, size = ip.read_set_begin"
+        o "  if vt == #{wire_type(t.value)}"
+        o "    _arr = Array.new(size) do"
+        indent
+        read_type t.value, "element", "vt"
+        outdent
+        o "      element"
+        o "    end"
+        o "    #{lhs} = ::Set.new(_arr)"
+        o "  else"
+        o "    handle_bad_list size"
+        o "  end"
+        o "  ip.read_list_end"
       else
         o "  #{lhs} = ip.#{read_func(t)}"
       end
@@ -293,6 +307,14 @@ module Stark
         outdent
         o "end"
         o "op.write_list_end"
+      elsif ft.kind_of? Stark::Parser::AST::Set
+        o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
+        o "#{name}.each do |v|"
+        indent
+        write_type ft.value, "v"
+        outdent
+        o "end"
+        o "op.write_set_end"
       elsif ft != "void"
         o "op.#{write_func(ft)} #{name}"
       end
