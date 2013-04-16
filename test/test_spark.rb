@@ -25,6 +25,16 @@ class TestSpark < Test::Unit::TestCase
     assert_nothing_raised do
       Stark.materialize file_path, TestSparkScope
     end
+    assert TestSparkScope.const_defined?(:Property)
+  end
+
+  def test_materialize_service_with_struct_set
+    file_path = File.join(File.dirname(__FILE__), 'users.thrift')
+    assert_nothing_raised do
+      Stark.materialize file_path, TestSparkScope
+    end
+    assert TestSparkScope.const_defined?(:User)
+    assert TestSparkScope.const_defined?(:FavoriteUsers)
   end
 
 end
