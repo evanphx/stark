@@ -73,7 +73,7 @@ module Stark
       elsif desc = @enums[t]
         "Stark::Converters::Enum.new(Enum_#{t})"
       else
-        raise "Blah"
+        raise "Unknown type <#{t}>"
       end
     end
 
