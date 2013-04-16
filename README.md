@@ -1,6 +1,6 @@
-# stark
+# stark [![Build Status](https://travis-ci.org/evanphx/stark.png)](https://travis-ci.org/evanphx/stark)
 
-* http://github.com/evanphx/stark
+* http://github.com/evanphx/stark 
 
 ## DESCRIPTION:
 
