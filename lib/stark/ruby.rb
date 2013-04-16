@@ -215,11 +215,23 @@ module Stark
     end
 
     def read_func(t)
-      ReadFunc[t] || raise("unknown type - #{t}")
+      if ReadFunc.has_key?(t)
+        ReadFunc[t]
+      elsif @structs.has_key?(t)
+        t
+      else
+        raise("unknown type - #{t}")
+      end
     end
 
     def write_func(t)
-      WriteFunc[t] || raise("unknown type - #{t}")
+      if WriteFunc.has_key?(t)
+        WriteFunc[t]
+      elsif @structs.has_key?(t)
+        t
+      else
+        raise("unknown type - #{t}")
+      end
     end
 
     def write_field(ft, name, idx)
