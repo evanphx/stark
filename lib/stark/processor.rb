@@ -5,6 +5,7 @@ module Stark
     end
 
     def process(iprot, oprot)
+      @iprot, @oprot = iprot, oprot
       name, type, seqid  = iprot.read_message_begin
       fail unless type == Thrift::MessageTypes::CALL
 
@@ -21,6 +22,8 @@ module Stark
         oprot.trans.flush
         false
       end
+    ensure
+      @iprot = @oprot = nil
     end
 
     def check_raise_specific(name, seqid, op, c)
@@ -55,7 +58,8 @@ module Stark
       raise TypeError, "Unable to convert #{obj.class} to Hash"
     end
 
-    def read_struct(ip, type, id, cls)
+    def read_struct(type, id, cls)
+      ip = @iprot
       obj = cls.new
 
       ip.read_struct_begin

@@ -215,63 +215,89 @@ module Stark
     end
 
     def read_func(t)
-      if ReadFunc.has_key?(t)
-        ReadFunc[t]
-      elsif @structs.has_key?(t)
-        t
-      else
-        raise("unknown type - #{t}")
-      end
+      ReadFunc[t] || raise("unknown type - #{t}")
     end
 
     def write_func(t)
-      if WriteFunc.has_key?(t)
-        WriteFunc[t]
-      elsif @structs.has_key?(t)
-        t
+      WriteFunc[t] || raise("unknown type - #{t}")
+    end
+
+    def read_type(t, lhs, found_type = 'rtype')
+      o "if #{found_type} != #{wire_type(t)}"
+      o "  handle_unexpected #{found_type}"
+      o "else"
+      if desc = @structs[t]
+        o "  #{lhs} = read_struct #{found_type}, rid, #{desc.name}"
+      elsif desc = @enums[t]
+        o "  #{lhs} = Enum_#{desc.name}[ip.read_i32]"
+      elsif t.kind_of? Stark::Parser::AST::Map
+        o "  kt, vt, size = ip.read_map_begin"
+        o "  if kt == #{wire_type(t.key)} && vt == #{wire_type(t.value)}"
+        o "    _hash = {}"
+        o "    size.times do"
+        indent
+        read_type(t.key, "k", "kt")
+        read_type(t.value, "v", "vt")
+        outdent
+        o "      _hash[k] = v"
+        o "    end"
+        o "    #{lhs} = _hash"
+        o "  else"
+        o "    handle_bad_map size"
+        o "  end"
+        o "  ip.read_map_end"
+      elsif t.kind_of? Stark::Parser::AST::List
+        o "  vt, size = ip.read_list_begin"
+        o "  if vt == #{wire_type(t.value)}"
+        o "    #{lhs} = Array.new(size) do"
+        indent
+        read_type t.value, "element", "vt"
+        outdent
+        o "      element"
+        o "    end"
+        o "  else"
+        o "    handle_bad_list size"
+        o "  end"
+        o "  ip.read_list_end"
       else
-        raise("unknown type - #{t}")
+        o "  #{lhs} = ip.#{read_func(t)}"
+      end
+      o "end"
+    end
+
+    def write_type(ft, name)
+      if desc = @structs[ft]
+        output_struct desc, name
+      elsif desc = @enums[ft]
+        o "op.write_i32 Enum_#{desc.name}[#{name}.to_sym]"
+      elsif ft.kind_of? Stark::Parser::AST::Map
+        o "#{name} = hash_cast #{name}"
+        o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, #{name}.size)"
+        o "#{name}.each do |k,v|"
+        indent
+        write_type ft.key, "k"
+        write_type ft.value, "v"
+        outdent
+        o "end"
+        o "op.write_map_end"
+      elsif ft.kind_of? Stark::Parser::AST::List
+        o "#{name} = Array(#{name})"
+        o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
+        o "#{name}.each do |v|"
+        indent
+        write_type ft.value, "v"
+        outdent
+        o "end"
+        o "op.write_list_end"
+      elsif ft != "void"
+        o "op.#{write_func(ft)} #{name}"
       end
     end
 
     def write_field(ft, name, idx)
-      if desc = @structs[ft]
-        o "op.write_field_begin '#{name}', ::Thrift::Types::STRUCT, #{idx}"
-        output_struct desc, name
-        o "op.write_field_end"
-      elsif desc = @enums[ft]
-        o "op.write_field_begin '#{name}', ::Thrift::Types::I32, #{idx}"
-        o "op.write_i32 Enum_#{desc.name}[#{name}.to_sym]"
-
-        o "op.write_field_end"
-      elsif ft.kind_of? Stark::Parser::AST::Map
-        o "#{name} = hash_cast #{name}"
-        o "op.write_field_begin '#{name}', ::Thrift::Types::MAP, #{idx}"
-        o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, #{name}.size)"
-
-        o "#{name}.each do |k,v|"
-        indent
-        o "op.#{write_func(ft.key)} k"
-        o "op.#{write_func(ft.value)} v"
-        outdent
-        o "end"
-
-        o "op.write_map_end"
-        o "op.write_field_end"
-      elsif ft.kind_of? Stark::Parser::AST::List
-        o "#{name} = Array(#{name})"
-        o "op.write_field_begin '#{name}', ::Thrift::Types::LIST, #{idx}"
-        o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
-        o "#{name}.each { |v| op.#{write_func(ft.value)}(v) }"
-        o "op.write_list_end"
-
-        o "op.write_field_end"
-      elsif ft != "void"
-        o "op.write_field_begin '#{name}', #{type(ft)}, #{idx}"
-        o "op.#{write_func(ft)} #{name}"
-        o "op.write_field_end"
-      end
-
+      o "op.write_field_begin '#{name}', #{wire_type(ft)}, #{idx}"
+      write_type ft, name
+      o "op.write_field_end"
     end
 
     def output_struct(desc, obj)
@@ -299,67 +325,9 @@ module Stark
         o "args = Array.new(#{args.size})"
 
         args.each do |arg|
-          if desc = @structs[arg.type]
-            o "_, rtype, rid = ip.read_field_begin"
-            o "if rtype != #{wire_type(arg.type)}"
-            o "  handle_unexpected rtype"
-            o "else"
-            o "  args[#{arg.index - 1}] = read_struct ip, rtype, rid, #{desc.name}"
-            o "end"
-            o "ip.read_field_end"
-          elsif desc = @enums[arg.type]
-            o "_, rtype, _ = ip.read_field_begin"
-            o "if rtype != #{wire_type(arg.type)}"
-            o "  handle_unexpected rtype"
-            o "else"
-            o "  args[#{arg.index - 1}] = Enum_#{desc.name}[ip.read_i32]"
-            o "end"
-            o "ip.read_field_end"
-
-          elsif arg.type.kind_of? Stark::Parser::AST::Map
-            ft = arg.type
-
-            o "_, rtype, _ = ip.read_field_begin"
-            o "if rtype != #{wire_type(arg.type)}"
-            o "  handle_unexpected rtype"
-            o "else"
-            o "  kt, vt, size = ip.read_map_begin"
-            o "  if kt == #{wire_type(ft.key)} && vt == #{wire_type(ft.value)}"
-            o "    result = {}"
-            o "    size.times do"
-            o "      result[ip.#{read_func(ft.key)}] = ip.#{read_func(ft.value)}"
-            o "    end"
-            o "    args[#{arg.index - 1}] = result"
-            o "  else"
-            o "    handle_bad_map size"
-            o "  end"
-            o "  ip.read_map_end"
-            o "end"
-            o "ip.read_field_end"
-          elsif arg.type.kind_of? Stark::Parser::AST::List
-            ft = arg.type
-            o "_, rtype, _ = ip.read_field_begin"
-            o "if rtype == ::Thrift::Types::LIST"
-            o "  vt, size = ip.read_list_begin"
-            o "  if vt == #{wire_type(ft.value)}"
-            o "    args[#{arg.index - 1}] = Array.new(size) { |n| ip.#{read_func(ft.value)} }"
-            o "  else"
-            o "    handle_bad_list size"
-            o "  end"
-            o "  ip.read_list_end"
-            o "else"
-            o "  handle_unexpected rtype"
-            o "end"
-            o "ip.read_field_end"
-          else
-            o "_, rtype, _ = ip.read_field_begin"
-            o "if rtype == #{type(arg.type)}"
-            o "  args[#{arg.index - 1}]= ip.#{read_func(arg.type)}"
-            o "else"
-            o "  handle_unexpected rtype"
-            o "end"
-            o "ip.read_field_end"
-          end
+          o "_, rtype, rid = ip.read_field_begin"
+          read_type arg.type, "args[#{arg.index - 1}]"
+          o "ip.read_field_end"
         end
 
         o "_, rtype, _ = ip.read_field_begin"
@@ -369,11 +337,10 @@ module Stark
 
         if t = func.throws
           o "result = check_raise_specific('#{func.name}', seqid, op, #{t.first.type}) do"
-        o "  @handler.#{func.name}(*args)"
-        o "end"
+          o "  @handler.#{func.name}(*args)"
+          o "end"
 
-        o "return unless result"
-
+          o "return unless result"
         else
           o "result = @handler.#{func.name}(*args)"
         end
@@ -390,7 +357,9 @@ module Stark
 
         ft = func.return_type
 
-        write_field ft, 'result', 0
+        if ft != "void"
+          write_field ft, 'result', 0
+        end
 
         o "op.write_field_stop"
         o "op.write_struct_end"
@@ -473,57 +442,7 @@ module Stark
         o "result = nil"
 
         if func.return_type != "void"
-          if desc = @structs[func.return_type]
-            o "if rtype != #{wire_type(func.return_type)}"
-            o "  handle_unexpected rtype"
-            o "else"
-            o "  result = read_generic rtype, rid, #{desc.name}"
-            o "end"
-          elsif desc = @enums[func.return_type]
-            o "if rtype != #{wire_type(func.return_type)}"
-            o "  handle_unexpected rtype"
-            o "else"
-            o "  result = Enum_#{desc.name}[ip.read_i32]"
-            o "end"
-
-          elsif func.return_type.kind_of? Stark::Parser::AST::Map
-            ft = func.return_type
-
-            o "if rtype != #{wire_type(func.return_type)}"
-            o "  handle_unexpected rtype"
-            o "else"
-            o "  kt, vt, size = ip.read_map_begin"
-            o "  if kt == #{wire_type(ft.key)} && vt == #{wire_type(ft.value)}"
-            o "    result = {}"
-            o "    size.times do"
-            o "      result[ip.#{read_func(ft.key)}] = ip.#{read_func(ft.value)}"
-            o "    end"
-            o "  else"
-            o "    handle_bad_map size"
-            o "  end"
-            o "  ip.read_map_end"
-            o "end"
-          elsif func.return_type.kind_of? Stark::Parser::AST::List
-            ft = func.return_type
-            o "if rtype == ::Thrift::Types::LIST"
-            o "  vt, size = ip.read_list_begin"
-            o "  if vt == #{wire_type(ft.value)}"
-            o "    result = Array.new(size) { |n| ip.#{read_func(ft.value)} }"
-            o "  else"
-            o "    handle_bad_list size"
-            o "  end"
-            o "  ip.read_list_end"
-            o "else"
-            o "  handle_unexpected rtype"
-            o "end"
-          else
-            o "if rtype == #{type(func.return_type)}"
-            o "  result = ip.#{read_func(func.return_type)}"
-            o "else"
-            o "  handle_unexpected rtype"
-            o "end"
-          end
-
+          read_type func.return_type, "result"
           o "_, rtype, rid = ip.read_field_begin unless rtype == ::Thrift::Types::STOP"
         end
 
