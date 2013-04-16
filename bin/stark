@@ -12,12 +12,20 @@ end
 
 ast = Stark::Parser.ast File.read(file)
 
-if out = ARGV.shift
-  out = File.open out, "w"
+if file = ARGV.shift
+  out = File.open file, "w"
 else
   out = STDOUT
 end
 
 ruby = Stark::Ruby.new out
 
-ruby.run ast
+begin
+  ruby.run ast
+rescue
+  if file
+    out.close
+    File.unlink file
+  end
+  raise
+end

@@ -5,11 +5,12 @@ struct User {
 }
 
 struct FavoriteUsers {
-  1:set<User>
+  1:set<User> favorites
 }
 
 service UserService {
   bool add_user(1:User user),
   set<User> get_users(),
+  FavoriteUsers favorite_users(),
   list<User> active_users()
 }
