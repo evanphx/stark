@@ -34,8 +34,15 @@ module Stark
     end
 
     def process_namespace(ns)
-      @namespace = ns.namespace if ns.lang == "rb"
-      o "module #{ns.namespace}"
+      return unless [nil, 'rb'].include?(ns.lang)
+      @namespace = ns.namespace.gsub('.', '::')
+      parts = @namespace.split('::')
+      if parts.length > 1
+        0.upto(parts.length - 2) do |i|
+          o "module #{parts[0..i].join('::')}; end unless defined?(#{parts[0..i].join('::')})"
+        end
+      end
+      o "module #{@namespace}"
       indent
     end
 
