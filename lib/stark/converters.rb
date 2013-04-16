@@ -1,4 +1,5 @@
 require 'thrift'
+require 'set'
 
 module Stark
   module Converters
@@ -170,6 +171,8 @@ module Stark
         v = @value
 
         Array.new(size) { v.read(ip) }
+      ensure
+        ip.read_list_end
       end
 
       def write(op, value)
@@ -181,6 +184,82 @@ module Stark
         value.each { |v| c.write op, v }
 
         op.write_list_end
+      end
+
+    end
+
+    class Set
+      def initialize(value)
+        @value = value
+      end
+
+      def type
+        Thrift::Types::SET
+      end
+
+      def read(ip)
+        vt, size = ip.read_set_begin
+
+        if vt != @value.type
+          raise TypeError, "Set expected to be type: #{@value.type}"
+        end
+
+        v = @value
+
+        ::Set.new(Array.new(size) { v.read(ip) })
+      ensure
+        ip.read_set_end
+      end
+
+      def write(op, value)
+        value = ::Set.new(Array(value))
+
+        op.write_list_begin @value.type, value.size
+
+        c = @value
+        value.each { |v| c.write op, v }
+
+        op.write_list_end
+      end
+
+    end
+
+    class Map
+      def initialize(key, value)
+        @key, @value = key, value
+      end
+
+      def type
+        Thrift::Types::MAP
+      end
+
+      def read(ip)
+        kt, vt, size = ip.read_map_begin
+
+        if kt != @key.type || vt != @value.type
+          raise TypeError, "Map expected to be type: (#{@key.type},#{@value.type})"
+        end
+
+        k, v = @key, @value
+
+        {}.tap do |hash|
+          size.times do
+            hash[k.read(ip)] = v.read(ip)
+          end
+        end
+      ensure
+        ip.read_map_end
+      end
+
+      def write(op, value)
+        op.write_map_begin @value.type, value.size
+
+        value.each do |k,v|
+          @key.write op, k
+          @value.write op, v
+        end
+
+        op.write_map_end
       end
 
     end

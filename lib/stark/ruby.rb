@@ -66,6 +66,10 @@ module Stark
     def converter(t)
       if t.kind_of? Stark::Parser::AST::List
         "Stark::Converters::List.new(#{converter(t.value)})"
+      elsif t.kind_of? Stark::Parser::AST::Set
+        "Stark::Converters::Set.new(#{converter(t.value)})"
+      elsif t.kind_of? Stark::Parser::AST::Map
+        "Stark::Converters::Map.new(#{converter(t.key)}, #{converter(t.value)})"
       elsif BUILTINS.include? t.downcase
         "Stark::Converters::#{t.upcase}"
       elsif desc = @structs[t]
