@@ -64,4 +64,54 @@ struct Bar {
     end
     assert_equal 'Unknown type <Bar>', e.message
   end
+
+  # long test name is long ...
+  def test_function_result_of_struct_with_field_list_of_struct
+    # and it seems this test should be more focused, instead of
+    # more of an integration test
+
+    ast = Stark::Parser.ast <<-EOM
+struct Foo {
+  1: i32 id
+}
+
+struct Bar {
+  1: list<Foo> foo_list
+}
+
+service Baz {
+  Bar get(1: i32 id)
+}
+    EOM
+
+    stream = StringIO.new
+    ruby = Stark::Ruby.new stream
+    ruby.run ast
+    # test was throwing exception - need a real assert
+  end
+
+  # long test name is long ...
+  def test_function_result_of_struct_with_list_of_enum
+    # and it seems this test should be more focused, instead of
+    # more of an integration test
+
+    ast = Stark::Parser.ast <<-EOM
+enum Foo {
+  QUUX
+}
+
+struct Bar {
+  1: list<Foo> foo_list
+}
+
+service Baz {
+  Bar get(1: i32 id)
+}
+    EOM
+
+    stream = StringIO.new
+    ruby = Stark::Ruby.new stream
+    ruby.run ast
+    # test was throwing exception - need a real assert
+  end
 end

@@ -250,7 +250,17 @@ module Stark
         o "#{name} = Array(#{name})"
         o "op.write_field_begin '#{name}', ::Thrift::Types::LIST, #{idx}"
         o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
-        o "#{name}.each { |v| op.#{write_func(ft.value)}(v) }"
+        o "#{name}.each do |v|"
+        indent
+        if desc = @structs[ft.value]
+          output_struct desc, 'v'
+        elsif desc = @enums[ft.value]
+          o "op.write_i32 Enum_#{desc.name}[v.to_sym]"
+        else
+          "op.#{write_func(ft.value)}(v)"
+        end
+        outdent
+        o "end"
         o "op.write_list_end"
 
         o "op.write_field_end"
