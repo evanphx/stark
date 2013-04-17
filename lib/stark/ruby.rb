@@ -257,7 +257,7 @@ module Stark
         elsif desc = @enums[ft.value]
           o "op.write_i32 Enum_#{desc.name}[v.to_sym]"
         else
-          "op.#{write_func(ft.value)}(v)"
+          o "op.#{write_func(ft.value)}(v)"
         end
         outdent
         o "end"
