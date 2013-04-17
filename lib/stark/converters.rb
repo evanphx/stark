@@ -3,6 +3,20 @@ require 'set'
 
 module Stark
   module Converters
+    module VOID
+      module_function
+
+      def type
+        Thrift::Types::VOID
+      end
+
+      def read(ip)
+      end
+
+      def write(op, value)
+      end
+    end
+
     module BYTE
       module_function
 
@@ -134,6 +148,22 @@ module Stark
       end
     end
 
+    class Exception < Struct
+      def initialize(cls)
+        @class = cls
+      end
+
+      def read(ip)
+        struct = @class::Struct.new
+        struct.read ip
+        @class.new struct
+      end
+
+      def write(op, ex)
+        ex.struct.write op
+      end
+    end
+
     class Enum
       def initialize(cls)
         @class = cls
@@ -252,7 +282,7 @@ module Stark
       end
 
       def write(op, value)
-        op.write_map_begin @value.type, value.size
+        op.write_map_begin @key.type, @value.type, value.size
 
         value.each do |k,v|
           @key.write op, k

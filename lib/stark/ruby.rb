@@ -22,6 +22,19 @@ module Stark
       o "require 'stark/exception'"
     end
 
+    def o(str = nil)
+      @stream.print(" " * @indent) if str
+      @stream.puts str
+    end
+
+    def indent
+      @indent += 2
+    end
+
+    def outdent
+      @indent -= 2
+    end
+
     def run(ast)
       ast.each { |a| a.accept self }
       close
@@ -51,6 +64,7 @@ module Stark
     end
 
     def process_enum(enum)
+      o
       e = "Enum_#{enum.name}"
       o "#{e} = Hash.new { |h,k| p [:bad, k]; h[k] = -1 }"
 
@@ -64,6 +78,8 @@ module Stark
       @enums[enum.name] = enum
     end
 
+    BUILTINS = %w!bool byte i16 i32 i64 double string void!
+
     def converter(t)
       if t.kind_of? Stark::Parser::AST::List
         "Stark::Converters::List.new(#{converter(t.value)})"
@@ -73,6 +89,8 @@ module Stark
         "Stark::Converters::Map.new(#{converter(t.key)}, #{converter(t.value)})"
       elsif BUILTINS.include? t.downcase
         "Stark::Converters::#{t.upcase}"
+      elsif desc = @exceptions[t]
+        "Stark::Converters::Exception.new(#{t})"
       elsif desc = @structs[t]
         "Stark::Converters::Struct.new(#{t})"
       elsif desc = @enums[t]
@@ -82,64 +100,46 @@ module Stark
       end
     end
 
-    def process_struct(str)
+    def process_struct(str, include_to_a = false)
       @structs[str.name] = str
 
+      o
       o "class #{str.name} < Stark::Struct"
       indent
-      o "Fields = {"
+      o "Fields = field_hash("
       indent
-
-      fields = str.fields.map do |f|
+      fields = (str.fields || []).map do |f|
         c = converter f.type
-        "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c})"
+        o "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c}),"
+      end
+      o ")"
+      outdent
+
+      (str.fields || []).each do |f|
+        o "def #{f.name}; @fields['#{f.name}']; end"
       end
 
-      o "   #{fields.join(', ')}"
-
-      outdent
-      o "}"
-
-      str.fields.each do |f|
-        o "def #{f.name}; @fields['#{f.name}']; end"
+      if include_to_a
+        o "def to_a"
+        o "  #{(str.fields || []).map {|f| f.name }.inspect}.map {|n| @fields[n] }"
+        o "end"
       end
 
       outdent
       o "end"
-
     end
-
-    BUILTINS = %w!bool byte i16 i32 i64 double string!
 
     def process_exception(str)
       @exceptions[str.name] = str
 
+      o
       o "class #{str.name} < Stark::Exception"
       indent
 
-      o "class Struct < Stark::Struct"
-      indent
-      o "Fields = {"
-      indent
+      str.name.clear; str.name.concat("Struct")
+      process_struct(str)
 
-      fields = str.fields.map do |f|
-        c = converter f.type
-        "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c})"
-      end
-
-      o "   #{fields.join(', ')}"
-
-      outdent
-      o "}"
-
-      str.fields.each do |f|
-        o "def #{f.name}; @fields['#{f.name}']; end"
-      end
-
-      outdent
-      o "end"
-
-      str.fields.each do |f|
+      (str.fields || []).each do |f|
         o "def #{f.name}; @struct.#{f.name}; end"
       end
 
@@ -147,252 +147,49 @@ module Stark
       o "end"
     end
 
-    def o(str)
-      @stream.print(" " * @indent)
-      @stream.puts str
-    end
-
-    def indent
-      @indent += 2
-    end
-
-    def outdent
-      @indent -= 2
-    end
-
-    CoreTypes = {
-      'bool' => "::Thrift::Types::BOOL",
-      'byte' => "::Thrift::Types::BYTE",
-      'double' => "::Thrift::Types::DOUBLE",
-      'i16' => "::Thrift::Types::I16",
-      'i32' => "::Thrift::Types::I32",
-      'i64' => "::Thrift::Types::I64",
-      'string' => '::Thrift::Types::STRING',
-      'struct' => '::Thrift::Types::STRUCT',
-      'map' => '::Thrift::Types::MAP',
-      'set' => '::Thrift::Types::SET',
-      'list' => '::Thrift::Types::LIST'
-    }
-
-    ReadFunc = {
-      'bool' => 'read_bool',
-      'byte' => 'read_byte',
-      'double' => 'read_double',
-      'i16' => "read_i16",
-      'i32' => "read_i32",
-      'i64' => "read_i64",
-      'string' => 'read_string',
-    }
-
-    WriteFunc = {
-      'bool' => 'write_bool',
-      'byte' => 'write_byte',
-      'double' => 'write_double',
-      'i16' => "write_i16",
-      'i32' => "write_i32",
-      'i64' => "write_i64",
-      'string' => 'write_string',
-    }
-
-    def type(t)
-      CoreTypes[t] || raise("unknown type - #{t}")
-    end
-
-    def wire_type(t)
-      return "::Thrift::Types::STRUCT" if @structs[t]
-      return "::Thrift::Types::I32" if @enums[t]
-
-      case t
-      when Stark::Parser::AST::Map
-        "::Thrift::Types::MAP"
-      when Stark::Parser::AST::List
-        "::Thrift::Types::LIST"
-      when Stark::Parser::AST::Set
-        "::Thrift::Types::SET"
-      else
-        type t
-      end
-    end
-
-    def object_type(t)
-      return t if @structs[t]
-      type t
-    end
-
-    def read_func(t)
-      ReadFunc[t] || raise("unknown type - #{t}")
-    end
-
-    def write_func(t)
-      WriteFunc[t] || raise("unknown type - #{t}")
-    end
-
-    def read_type(t, lhs, found_type = 'rtype')
-      o "if #{found_type} != #{wire_type(t)}"
-      o "  handle_unexpected #{found_type}"
-      o "else"
-      if desc = @structs[t]
-        o "  #{lhs} = read_struct #{found_type}, rid, #{desc.name}"
-      elsif desc = @enums[t]
-        o "  #{lhs} = Enum_#{desc.name}[ip.read_i32]"
-      elsif t.kind_of? Stark::Parser::AST::Map
-        o "  kt, vt, size = ip.read_map_begin"
-        o "  if kt == #{wire_type(t.key)} && vt == #{wire_type(t.value)}"
-        o "    _hash = {}"
-        o "    size.times do"
-        indent
-        read_type(t.key, "k", "kt")
-        read_type(t.value, "v", "vt")
-        outdent
-        o "      _hash[k] = v"
-        o "    end"
-        o "    #{lhs} = _hash"
-        o "  else"
-        o "    handle_bad_map size"
-        o "  end"
-        o "  ip.read_map_end"
-      elsif t.kind_of? Stark::Parser::AST::List
-        o "  vt, size = ip.read_list_begin"
-        o "  if vt == #{wire_type(t.value)}"
-        o "    #{lhs} = Array.new(size) do"
-        indent
-        read_type t.value, "element", "vt"
-        outdent
-        o "      element"
-        o "    end"
-        o "  else"
-        o "    handle_bad_list size"
-        o "  end"
-        o "  ip.read_list_end"
-      elsif t.kind_of? Stark::Parser::AST::Set
-        o "  vt, size = ip.read_set_begin"
-        o "  if vt == #{wire_type(t.value)}"
-        o "    _arr = Array.new(size) do"
-        indent
-        read_type t.value, "element", "vt"
-        outdent
-        o "      element"
-        o "    end"
-        o "    #{lhs} = ::Set.new(_arr)"
-        o "  else"
-        o "    handle_bad_list size"
-        o "  end"
-        o "  ip.read_list_end"
-      else
-        o "  #{lhs} = ip.#{read_func(t)}"
-      end
-      o "end"
-    end
-
-    def write_type(ft, name)
-      if desc = @structs[ft]
-        output_struct desc, name
-      elsif desc = @enums[ft]
-        o "op.write_i32 Enum_#{desc.name}[#{name}.to_sym]"
-      elsif ft.kind_of? Stark::Parser::AST::Map
-        o "#{name} = hash_cast #{name}"
-        o "op.write_map_begin(#{wire_type(ft.key)}, #{wire_type(ft.value)}, #{name}.size)"
-        o "#{name}.each do |k,v|"
-        indent
-        write_type ft.key, "k"
-        write_type ft.value, "v"
-        outdent
-        o "end"
-        o "op.write_map_end"
-      elsif ft.kind_of? Stark::Parser::AST::List
-        o "#{name} = Array(#{name})"
-        o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
-        o "#{name}.each do |v|"
-        indent
-        write_type ft.value, "v"
-        outdent
-        o "end"
-        o "op.write_list_end"
-      elsif ft.kind_of? Stark::Parser::AST::Set
-        o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
-        o "#{name}.each do |v|"
-        indent
-        write_type ft.value, "v"
-        outdent
-        o "end"
-        o "op.write_set_end"
-      elsif ft != "void"
-        o "op.#{write_func(ft)} #{name}"
-      end
-    end
-
-    def write_field(ft, name, idx)
-      o "op.write_field_begin '#{name}', #{wire_type(ft)}, #{idx}"
-      write_type ft, name
-      o "op.write_field_end"
-    end
-
-    def output_struct(desc, obj)
-      o "op.write_struct_begin '#{desc.name}'"
-
-      desc.fields.each do |f|
-        o "#{f.name} = #{obj}.#{f.name}"
-        write_field f.type, f.name, f.index
-      end
-
-      o "op.write_field_stop"
-      o "op.write_struct_end"
-    end
-
     def write_processor(serv)
+      o
       o "class Processor < Stark::Processor"
       indent
 
+      separate = false
       serv.functions.each do |func|
+        o if separate
+        separate = true
+
         o "def process_#{func.name}(seqid, ip, op)"
         indent
 
-        o "ip.read_struct_begin"
-        args = Array(func.arguments)
-        o "args = Array.new(#{args.size})"
-
-        args.each do |arg|
-          o "_, rtype, rid = ip.read_field_begin"
-          read_type arg.type, "args[#{arg.index - 1}]"
-          o "ip.read_field_end"
-        end
-
-        o "_, rtype, _ = ip.read_field_begin"
-        o "fail unless rtype == ::Thrift::Types::STOP"
-        o "ip.read_struct_end"
+        o "args = Args_for_#{func.name}.new.read(ip).to_a"
         o "ip.read_message_end"
 
+        o "result = Result_for_#{func.name}.new"
         if t = func.throws
-          o "result = check_raise_specific('#{func.name}', seqid, op, #{t.first.type}) do"
-          o "  @handler.#{func.name}(*args)"
+          o "begin"
+          o "  result[0] = @handler.#{func.name}(*args)"
+          t.each do |tf|
+            o "rescue #{tf.type} => e#{tf.index}"
+            o "  result[#{tf.index}] = e#{tf.index}"
+          end
           o "end"
-
-          o "return unless result"
+        elsif func.return_type == "void"
+          o "@handler.#{func.name}(*args)"
         else
-          o "result = @handler.#{func.name}(*args)"
+          o "result[0] = @handler.#{func.name}(*args)"
         end
 
         if func.options == :oneway
-          o "return result"
+          o "return result[0]"
           outdent
           o "end"
           next
         end
 
         o "op.write_message_begin '#{func.name}', ::Thrift::MessageTypes::REPLY, seqid"
-        o "op.write_struct_begin '#{func.name}_result'"
-
-        ft = func.return_type
-
-        if ft != "void"
-          write_field ft, 'result', 0
-        end
-
-        o "op.write_field_stop"
-        o "op.write_struct_end"
+        o "result.write(ip)"
         o "op.write_message_end"
         o "op.trans.flush"
-        o "return result"
+        o "return result[0]"
 
         outdent
         o "end"
@@ -402,43 +199,22 @@ module Stark
       o "end"
     end
 
-    def process_service(serv)
-      o "module #{serv.name}"
-      indent
+    def write_client(serv)
+      o
       o "class Client < Stark::Client"
       indent
 
-      o "Functions = {}"
-      serv.functions.each do |func|
-        o "Functions[\"#{func.name}\"] = {"
-
-        o "    :args => {"
-
-        mapped_args = Array(func.arguments).map do |a|
-          "#{a.index} => #{wire_type(a.type)}"
-        end
-
-        o "      #{mapped_args.join(', ')}"
-
-        o "    }"
-        o "  }"
-      end
-
+      separate = false
       serv.functions.each do |func|
         names = Array(func.arguments).map { |f| f.name }.join(", ")
+        o if separate
+        separate = true
 
         o "def #{func.name}(#{names})"
         indent
         o "op = @oprot"
         o "op.write_message_begin '#{func.name}', ::Thrift::MessageTypes::CALL, 0"
-        o "op.write_struct_begin \"#{func.name}_args\""
-
-        Array(func.arguments).each do |arg|
-          write_field arg.type, arg.name, arg.index
-        end
-
-        o "op.write_field_stop"
-        o "op.write_struct_end"
+        o "Args_for_#{func.name}.new(#{names}).write(op)"
         o "op.write_message_end"
         o "op.trans.flush"
 
@@ -454,30 +230,21 @@ module Stark
 
         o "handle_exception mtype"
 
-        o "ip.read_struct_begin"
+        o "returnval = Result_for_#{func.name}.new.read(ip)"
 
-        o "_, rtype, rid = ip.read_field_begin"
+        o "ip.read_message_end"
 
         if t = func.throws
-          o "if rid == 1"
-          o "  handle_throw #{t.first.type}"
-          o "end"
+          t.each do |tf|
+            o "raise returnval[#{tf.index}] if returnval[#{tf.index}]"
+          end
         end
-
-        o "fail unless rid == 0"
-
-        o "result = nil"
 
         if func.return_type != "void"
-          read_type func.return_type, "result"
-          o "_, rtype, rid = ip.read_field_begin unless rtype == ::Thrift::Types::STOP"
+          o "returnval.result"
+        else
+          o "nil"
         end
-
-        o "fail if rtype != ::Thrift::Types::STOP"
-
-        o "ip.read_struct_end"
-        o "ip.read_message_end"
-        o "return result"
 
         outdent
 
@@ -486,7 +253,20 @@ module Stark
 
       outdent
       o "end"
+    end
 
+    def process_service(serv)
+      o
+      o "module #{serv.name}"
+      indent
+      serv.functions.each do |func|
+        process_struct(Stark::Parser::AST::Struct.new("struct", "Args_for_#{func.name}", func.arguments), true)
+        result_fields = [Stark::Parser::AST::Field.new(0, func.return_type, "result", nil, nil)]
+        result_fields += func.throws if func.throws
+        process_struct(Stark::Parser::AST::Struct.new("struct", "Result_for_#{func.name}", result_fields))
+      end
+
+      write_client serv
       write_processor serv
 
       outdent
