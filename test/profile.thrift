@@ -30,8 +30,8 @@ enum Status {
 }
 
 struct UserFriends {
-  1: i32 user,
-  2: list<i32> friends
+  1: UserProfile user,
+  2: list<UserProfile> friends
 }
 
 exception RockTooHard {
@@ -54,7 +54,7 @@ service UserStorage {
   void set_user_status(1: UserStatus stat),
   UserRelationship user_relationship(),
   void set_user_relationship(1: UserRelationship rel)
-  UserFriends user_friends(),
+  UserFriends user_friends(1: UserProfile xuser),
   void set_user_friends(1: UserFriends fr)
 }
 

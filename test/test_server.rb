@@ -34,9 +34,10 @@ class TestServer < Test::Unit::TestCase
       @last_status = nil
       @n = n
       @user_status = nil
+      @last_user_friends = nil
     end
 
-    attr_accessor :last_map, :last_list, :last_status, :user_status
+    attr_accessor :last_map, :last_list, :last_status, :user_status, :last_user_friends
 
     def store(obj)
       @users[obj.uid] = obj
@@ -77,6 +78,14 @@ class TestServer < Test::Unit::TestCase
     attr_accessor :user_relationship
     def set_user_relationship(rel)
       @user_relationship = rel
+    end
+
+    def user_friends(user)
+      @last_user_friends
+    end
+
+    def set_user_friends(f)
+      @last_user_friends = f
     end
   end
 
@@ -313,6 +322,44 @@ class TestServer < Test::Unit::TestCase
 
     assert_equal 0, rel.user
     assert_equal :ITS_COMPLICATED, rel.status
+
+    st.join
+  end
+
+  def test_read_struct_with_struct_list
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    user = @n::UserProfile.new 'uid' => 1, 'name' => 'foo', 'blurb' => 'placeholder'
+    friend = @n::UserProfile.new 'uid' => 2, 'name' => 'bar', 'blurb' => 'placeholder'
+    friends = @n::UserFriends.new 'user' => user, 'friends' => [friend]
+
+    @handler.set_user_friends friends
+
+    rel = @client.user_friends user
+
+    assert_equal 1, rel.user.uid
+    assert_equal 2, rel.friends[0].uid
+
+    st.join
+  end
+
+  def test_write_struct_with_struct_list
+    st = Thread.new do
+      @server.process @server_p, @server_p
+    end
+
+    user = @n::UserProfile.new 'uid' => 1, 'name' => 'foo', 'blurb' => 'placeholder'
+    friend = @n::UserProfile.new 'uid' => 2, 'name' => 'bar', 'blurb' => 'placeholder'
+    friends = @n::UserFriends.new 'user' => user, 'friends' => [friend]
+
+    @client.set_user_friends friends
+
+    rel = @handler.last_user_friends
+
+    assert_equal 1, rel.user.uid
+    assert_equal 2, rel.friends[0].uid
 
     st.join
   end

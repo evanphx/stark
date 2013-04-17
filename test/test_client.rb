@@ -82,7 +82,10 @@ class TestClient < Test::Unit::TestCase
       @user_relationship = rel
     end
 
-    attr_accessor :user_friends
+    def user_friends(user)
+      @user_friends
+    end
+
     def set_user_friends(fr)
       @user_friends = fr
     end
@@ -338,14 +341,17 @@ class TestClient < Test::Unit::TestCase
       @server.process @server_p, @server_p
     end
 
-    stat = UserFriends.new 'user' => 0, 'friends' => [4,8,47]
+    user = UserProfile.new 'uid' => 1, 'name' => 'foo', 'blurb' => 'placeholder'
+    friend = UserProfile.new 'uid' => 2, 'name' => 'bar', 'blurb' => 'placeholder'
+    stat = UserFriends.new 'user' => user, 'friends' => [friend]
 
-    @handler.user_friends = stat
+    @handler.set_user_friends stat
 
-    rel = @client.user_friends
+    rel = @client.user_friends user
 
-    assert_equal 0, rel.user
-    assert_equal [4,8,47], rel.friends
+    assert_equal 'foo', rel.user.name
+    assert_equal 1, rel.friends.length
+    assert_equal 'bar', rel.friends[0].name
 
     st.join
   end
@@ -355,14 +361,16 @@ class TestClient < Test::Unit::TestCase
       @server.process @server_p, @server_p
     end
 
-    stat = @n::UserFriends.new 'user' => 0, 'friends' => [4,8,47]
+    user = UserProfile.new 'uid' => 1, 'name' => 'foo', 'blurb' => 'placeholder'
+    friend = UserProfile.new 'uid' => 2, 'name' => 'bar', 'blurb' => 'placeholder'
+    stat = @n::UserFriends.new 'user' => user, 'friends' => [friend]
 
     @client.set_user_friends stat
 
-    rel = @handler.user_friends
+    rel = @handler.user_friends user
 
-    assert_equal 0, rel.user
-    assert_equal [4,8,47], rel.friends
+    assert_equal 'foo', rel.user.name
+    assert_equal 'bar', rel.friends[0].name
 
     st.join
   end
