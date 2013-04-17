@@ -172,11 +172,13 @@ root = Program !.
 
 Program = Element*:a { a }
 
-CComment = "/*" < (!"*/" .)* > "*/" obsp ~comment(text)
+CMLComment = "/*" < (!"*/" .)* > "*/" obsp ~comment(text)
+
+CSLComment = "//" <  (!"\n" .)* > bsp ~comment(text)
 
 HComment = "#" <  (!"\n" .)* > bsp ~comment(text)
 
-Comment = CComment | HComment
+Comment = CMLComment | CSLComment | HComment
 
 CaptureDocText = {}
 DestroyDocText = {}

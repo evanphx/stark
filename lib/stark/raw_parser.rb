@@ -1424,8 +1424,8 @@ class Stark::Parser
     return _tmp
   end
 
-  # CComment = "/*" < (!"*/" .)* > "*/" obsp {comment(text)}
-  def _CComment
+  # CMLComment = "/*" < (!"*/" .)* > "*/" obsp {comment(text)}
+  def _CMLComment
 
     _save = self.pos
     while true # sequence
@@ -1482,7 +1482,64 @@ class Stark::Parser
       break
     end # end sequence
 
-    set_failed_rule :_CComment unless _tmp
+    set_failed_rule :_CMLComment unless _tmp
+    return _tmp
+  end
+
+  # CSLComment = "//" < (!"\n" .)* > bsp {comment(text)}
+  def _CSLComment
+
+    _save = self.pos
+    while true # sequence
+      _tmp = match_string("//")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _text_start = self.pos
+      while true
+
+        _save2 = self.pos
+        while true # sequence
+          _save3 = self.pos
+          _tmp = match_string("\n")
+          _tmp = _tmp ? nil : true
+          self.pos = _save3
+          unless _tmp
+            self.pos = _save2
+            break
+          end
+          _tmp = get_byte
+          unless _tmp
+            self.pos = _save2
+          end
+          break
+        end # end sequence
+
+        break unless _tmp
+      end
+      _tmp = true
+      if _tmp
+        text = get_text(_text_start)
+      end
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_bsp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin; comment(text); end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
+    set_failed_rule :_CSLComment unless _tmp
     return _tmp
   end
 
@@ -1543,12 +1600,15 @@ class Stark::Parser
     return _tmp
   end
 
-  # Comment = (CComment | HComment)
+  # Comment = (CMLComment | CSLComment | HComment)
   def _Comment
 
     _save = self.pos
     while true # choice
-      _tmp = apply(:_CComment)
+      _tmp = apply(:_CMLComment)
+      break if _tmp
+      self.pos = _save
+      _tmp = apply(:_CSLComment)
       break if _tmp
       self.pos = _save
       _tmp = apply(:_HComment)
@@ -3982,9 +4042,10 @@ class Stark::Parser
   Rules[:_obsp] = rule_info("obsp", "/[\\s]*/")
   Rules[:_root] = rule_info("root", "Program !.")
   Rules[:_Program] = rule_info("Program", "Element*:a { a }")
-  Rules[:_CComment] = rule_info("CComment", "\"/*\" < (!\"*/\" .)* > \"*/\" obsp {comment(text)}")
+  Rules[:_CMLComment] = rule_info("CMLComment", "\"/*\" < (!\"*/\" .)* > \"*/\" obsp {comment(text)}")
+  Rules[:_CSLComment] = rule_info("CSLComment", "\"//\" < (!\"\\n\" .)* > bsp {comment(text)}")
   Rules[:_HComment] = rule_info("HComment", "\"\#\" < (!\"\\n\" .)* > bsp {comment(text)}")
-  Rules[:_Comment] = rule_info("Comment", "(CComment | HComment)")
+  Rules[:_Comment] = rule_info("Comment", "(CMLComment | CSLComment | HComment)")
   Rules[:_CaptureDocText] = rule_info("CaptureDocText", "{}")
   Rules[:_DestroyDocText] = rule_info("DestroyDocText", "{}")
   Rules[:_HeaderList] = rule_info("HeaderList", "(HeaderList Header | Header)")

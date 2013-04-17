@@ -27,6 +27,7 @@ Gem::Specification.new do |s|
       s.add_runtime_dependency(%q<thrift>, ["~> 0.9.0"])
       s.add_development_dependency(%q<rdoc>, ["~> 4.0"])
       s.add_development_dependency(%q<hoe>, ["~> 3.5"])
+      s.add_development_dependency(%q<kpeg>)
     else
       s.add_dependency(%q<thrift>, ["~> 0.9.0"])
       s.add_dependency(%q<rdoc>, ["~> 4.0"])

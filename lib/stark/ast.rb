@@ -49,5 +49,10 @@ class Stark::Parser
         obj.process_exception self
       end
     end
+
+    class Comment
+      def accept(obj)
+      end
+    end
   end
 end

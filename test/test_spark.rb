@@ -37,4 +37,12 @@ class TestSpark < Test::Unit::TestCase
     assert TestSparkScope.const_defined?(:FavoriteUsers)
   end
 
+  def test_materialize_service_with_comments
+    file_path = File.join(File.dirname(__FILE__), 'comments.thrift')
+    assert_nothing_raised do
+      Stark.materialize file_path, TestSparkScope
+    end
+    assert TestSparkScope.const_defined?(:Foo)
+  end
+
 end
