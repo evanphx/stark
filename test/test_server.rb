@@ -166,7 +166,7 @@ class TestServer < Test::Unit::TestCase
       @server.process @server_p, @server_p
     end
 
-    assert_equal [], @client.last_list
+    assert_equal nil, @client.last_list
 
     st.join
   end
