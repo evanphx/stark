@@ -232,7 +232,7 @@ module Stark
       o "  handle_unexpected #{found_type}"
       o "else"
       if desc = @structs[t]
-        o "  #{lhs} = read_struct #{found_type}, rid, #{desc.name}"
+        o "  #{lhs} = read_struct ip, #{found_type}, rid, #{desc.name}"
       elsif desc = @enums[t]
         o "  #{lhs} = Enum_#{desc.name}[ip.read_i32]"
       elsif t.kind_of? Stark::Parser::AST::Map

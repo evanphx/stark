@@ -62,9 +62,7 @@ module Stark
       raise TypeError, "Unable to convert #{obj.class} to Hash"
     end
 
-    def read_struct(type, id, cls)
-      ip = @iprot
-
+    def read_struct(ip, type, id, cls)
       obj = cls.new
 
       ip.read_struct_begin
