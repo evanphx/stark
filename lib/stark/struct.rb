@@ -35,7 +35,7 @@ module Stark
     def write_fields(op)
       self.class::Fields.each do |idx, field|
         next if idx == :count
-        field.write op, @fields[field.name]
+        field.write op, @fields[field.name] if @fields[field.name]
       end
     end
   end

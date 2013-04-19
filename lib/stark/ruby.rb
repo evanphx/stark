@@ -312,8 +312,11 @@ module Stark
       o "op.write_struct_begin '#{desc.name}'"
 
       desc.fields.each do |f|
-        o "#{f.name} = #{obj}.#{f.name}"
+        o "if #{f.name} = #{obj}.#{f.name}"
+        indent
         write_field f.type, f.name, f.index
+        outdent
+        o "end"
       end
 
       o "op.write_field_stop"

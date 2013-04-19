@@ -93,8 +93,11 @@ class TestClient < Test::Unit::TestCase
       @server.process @server_p, @server_p
     end
     yield
+  rescue => e
+    st = nil
+    raise e
   ensure
-    st.join
+    st.value if st
   end
 
   def test_store_and_retrieve
@@ -111,6 +114,21 @@ class TestClient < Test::Unit::TestCase
     assert_equal 0, obj.uid
     assert_equal "root", obj.name
     assert_equal "god", obj.blurb
+  end
+
+  def test_store_and_retrieve_with_some_missing_values
+    send_to_server do
+      xuser = @n::UserProfile.new 'uid' => 0, 'name' => 'root'
+      @client.store xuser
+    end
+
+    obj = send_to_server do
+      @client.retrieve 0
+    end
+
+    assert_equal 0, obj.uid
+    assert_equal "root", obj.name
+    assert obj.blurb.nil?
   end
 
   def test_set_map
