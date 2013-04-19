@@ -102,6 +102,7 @@ module Stark
 
       str.fields.each do |f|
         o "def #{f.name}; @fields['#{f.name}']; end"
+        o "def #{f.name}=(obj); @fields['#{f.name}'] = obj; end"
       end
 
       outdent
@@ -134,6 +135,7 @@ module Stark
 
       str.fields.each do |f|
         o "def #{f.name}; @fields['#{f.name}']; end"
+        o "def #{f.name}=(obj); @fields['#{f.name}'] = obj; end"
       end
 
       outdent
@@ -141,6 +143,7 @@ module Stark
 
       str.fields.each do |f|
         o "def #{f.name}; @struct.#{f.name}; end"
+        o "def #{f.name}=(obj); @struct.#{f.name} = obj; end"
       end
 
       outdent
