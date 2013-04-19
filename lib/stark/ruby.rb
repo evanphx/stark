@@ -117,27 +117,8 @@ module Stark
       o "class #{str.name} < Stark::Exception"
       indent
 
-      o "class Struct < Stark::Struct"
-      indent
-      o "Fields = {"
-      indent
-
-      fields = str.fields.map do |f|
-        c = converter f.type
-        "#{f.index} => Stark::Field.new(#{f.index}, '#{f.name}', #{c})"
-      end
-
-      o "   #{fields.join(', ')}"
-
-      outdent
-      o "}"
-
-      str.fields.each do |f|
-        o "def #{f.name}; @fields['#{f.name}']; end"
-      end
-
-      outdent
-      o "end"
+      str.name.clear; str.name.concat("Struct")
+      process_struct(str)
 
       str.fields.each do |f|
         o "def #{f.name}; @struct.#{f.name}; end"
