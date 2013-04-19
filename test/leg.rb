@@ -57,8 +57,6 @@ end
 
 server = UserStorage::Processor.new Handler.new
 
-Thread.abort_on_exception = true
-
 st = Thread.new do
   server.process server_p, server_p
 end

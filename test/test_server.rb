@@ -5,8 +5,6 @@ require 'stark'
 require 'rubygems'
 require 'thrift'
 
-Thread.abort_on_exception = true
-
 class TestServer < Test::Unit::TestCase
   def setup
     @client_t, @server_t = Stark.pipe_transport
@@ -208,8 +206,6 @@ class TestServer < Test::Unit::TestCase
 
     assert_equal 11, e.volume
   end
-
-  # Thread.abort_on_exception = true
 
   def test_oneway
     st = Thread.new do

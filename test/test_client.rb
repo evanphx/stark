@@ -196,8 +196,6 @@ class TestClient < Test::Unit::TestCase
     assert_equal 11, e.volume
   end
 
-  # Thread.abort_on_exception = true
-
   def test_oneway
     send_to_server do
       t = Time.now
