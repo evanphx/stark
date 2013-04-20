@@ -118,7 +118,7 @@ module Stark
       o "class #{str.name} < Stark::Exception"
       indent
 
-      str.name.clear; str.name.concat("Struct")
+      str.name.replace "Struct"
       process_struct(str)
 
       str.fields.each do |f|
