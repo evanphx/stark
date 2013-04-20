@@ -102,6 +102,7 @@ module Stark
 
       str.fields.each do |f|
         o "def #{f.name}; @fields['#{f.name}']; end"
+        o "def #{f.name}=(obj); @fields['#{f.name}'] = obj; end"
       end
 
       outdent
@@ -122,6 +123,7 @@ module Stark
 
       str.fields.each do |f|
         o "def #{f.name}; @struct.#{f.name}; end"
+        o "def #{f.name}=(obj); @struct.#{f.name} = obj; end"
       end
 
       outdent
@@ -213,7 +215,7 @@ module Stark
       o "  handle_unexpected #{found_type}"
       o "else"
       if desc = @structs[t]
-        o "  #{lhs} = read_struct #{found_type}, rid, #{desc.name}"
+        o "  #{lhs} = read_struct ip, #{found_type}, rid, #{desc.name}"
       elsif desc = @enums[t]
         o "  #{lhs} = Enum_#{desc.name}[ip.read_i32]"
       elsif t.kind_of? Stark::Parser::AST::Map
