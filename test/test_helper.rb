@@ -6,6 +6,10 @@ module TestHelper
 
     @n = Module.new
     Stark.materialize "test/profile.thrift", @n
+
+    @prev_logger = Stark.logger
+    @log_stream = StringIO.new
+    Stark.logger = Logger.new @log_stream
   end
 
   def setup_client
@@ -27,6 +31,7 @@ module TestHelper
   end
 
   def teardown
+    Stark.logger = @prev_logger
     @client_t.close
     @server_t.close
   end

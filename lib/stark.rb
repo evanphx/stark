@@ -1,7 +1,16 @@
 require 'thrift'
+require 'logger'
 
 module Stark
   VERSION = '0.8.0'
+
+  def self.logger
+    @logger ||= ::Logger.new($stdout)
+  end
+
+  def self.logger=(logger)
+    @logger = logger
+  end
 
   def self.pipe_transport
     cr, cw = IO.pipe

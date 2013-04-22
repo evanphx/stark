@@ -5,7 +5,7 @@ require 'stark'
 require 'rubygems'
 require 'thrift'
 
-require 'test_helper'
+require 'test/test_helper'
 
 class TestServer < Test::Unit::TestCase
   include TestHelper
@@ -187,7 +187,15 @@ class TestServer < Test::Unit::TestCase
   end
 
   def test_exception_raised
-    @server = @n::UserStorage::Processor.new @handler
+    set_handler Object.new.tap {|h| def h.respond_to?(*); true; end}
 
+    e = send_to_server do
+      assert_raises Thrift::ApplicationException do
+        @client.last_status
+      end
+    end
+    assert e.type == Thrift::ApplicationException::INTERNAL_ERROR
+    assert e.message =~ /undefined method/
+    assert @log_stream.string =~ /undefined method/
   end
 end

@@ -9,7 +9,7 @@ $: << "test/legacy_profile"
 
 require 'user_storage'
 
-require 'test_helper'
+require 'test/test_helper'
 
 class TestClient < Test::Unit::TestCase
   include TestHelper
