@@ -1,7 +1,11 @@
 module Stark
   class Struct
     def initialize(fields={})
-      @fields = fields
+      @fields = {}.tap do |f|
+        fields.each do |k,v|
+          f[k.to_s] = v
+        end
+      end
     end
 
     def set_from_index(type, idx, ip)
