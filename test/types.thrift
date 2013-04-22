@@ -23,6 +23,12 @@ struct AllTypes {
   9: list<string> a_list
  10: set<i32> a_set
  11: WhichField field
+ 12: list<Element> a_list_of_structs
+}
+
+struct Element {
+ 1: i64 id
+ 2: string name
 }
 
 exception AnException {

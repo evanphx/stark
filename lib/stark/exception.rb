@@ -1,15 +1,15 @@
 module Stark
   class Exception < RuntimeError
-    def initialize(struct)
-      super "A remote exception occurred"
-
-      if struct.kind_of? Hash
-        @struct = self.class::Struct.new(struct)
-      else
-        @struct = struct
+    def initialize(fields_or_msg = nil)
+      case fields_or_msg
+      when Hash
+        fields_or_msg.each do |k,v|
+          send(:"#{k}=", v) if respond_to?(:"#{k}=")
+        end
+      when nil
+        fields_or_msg = "A remote exception occurred"
       end
+      super
     end
-
-    attr_reader :struct
   end
 end
