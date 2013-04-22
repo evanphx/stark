@@ -5,8 +5,8 @@ module TestHelper
     @server_p = Thrift::BinaryProtocol.new @server_t
 
     @n = Module.new
-    Stark.materialize "test/profile.thrift", @n
-
+    Stark.materialize self.class::IDL, @n
+    @s = @n.module_eval self.class::SERVICE
     @prev_logger = Stark.logger
     @log_stream = StringIO.new
     Stark.logger = Logger.new @log_stream
@@ -21,13 +21,13 @@ module TestHelper
 
   def setup_server(handler = nil)
     setup_shared
-    @client = @n::UserStorage::Client.new @client_p, @client_p
+    @client = @s::Client.new @client_p, @client_p
     set_handler handler
   end
 
   def set_handler(handler = nil)
     @handler = handler || Handler.new(@n)
-    @server = @n::UserStorage::Processor.new @handler
+    @server = @s::Processor.new @handler
   end
 
   def teardown

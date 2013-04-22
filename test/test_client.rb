@@ -12,6 +12,8 @@ require 'user_storage'
 require 'test/test_helper'
 
 class TestClient < Test::Unit::TestCase
+  IDL = "test/profile.thrift"
+  SERVICE = "UserStorage"
   include TestHelper
 
   def setup

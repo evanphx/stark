@@ -256,6 +256,7 @@ module Stark
         o "end"
         o "op.write_list_end"
       elsif ft.kind_of? Stark::Parser::AST::Set
+        o "#{name} = Set.new(#{name})"
         o "op.write_list_begin(#{wire_type(ft.value)}, #{name}.size)"
         o "#{name}.each do |v|"
         indent

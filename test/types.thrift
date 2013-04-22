@@ -1,14 +1,15 @@
 enum WhichField {
-  BOOL,
-  BYTE,
-  DOUBLE,
-  I16,
-  I32,
-  I64,
-  STRING,
-  MAP,
-  LIST,
-  SET
+  bool,
+  byte,
+  double,
+  i16,
+  i32,
+  i64,
+  string,
+  map,
+  list,
+  set,
+  list_of_structs
 }
 
 struct AllTypes {
@@ -22,8 +23,8 @@ struct AllTypes {
   8: map<byte,string> a_map
   9: list<string> a_list
  10: set<i32> a_set
- 11: WhichField field
- 12: list<Element> a_list_of_structs
+ 11: list<Element> a_list_of_structs
+ 12: WhichField field
 }
 
 struct Element {
