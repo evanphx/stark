@@ -613,7 +613,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # reserved = ("BEGIN" | "END" | "__CLASS__" | "__DIR__" | "__FILE__" | "__FUNCTION__" | "__LINE__" | "__METHOD__" | "__NAMESPACE__" | "abstract" | "alias" | "and" | "args" | "as" | "assert" | "begin" | "break" | "case" | "catch" | "class" | "clone" | "continue" | "declare" | "def" | "default" | "del" | "delete" | "do" | "dynamic" | "elif" | "else" | "elseif" | "elsif" | "end" | "enddeclare" | "endfor" | "endforeach" | "endif" | "endswitch" | "endwhile" | "ensure" | "except" | "exec" | "finally" | "float" | "for" | "foreach" | "function" | "global" | "goto" | "if" | "implements" | "import" | "in" | "inline" | "instanceof" | "interface" | "is" | "lambda" | "module" | "native" | "new" | "next" | "nil" | "not" | "or" | "pass" | "public" | "print" | "private" | "protected" | "public" | "raise" | "redo" | "rescue" | "retry" | "register" | "return" | "self" | "sizeof" | "static" | "super" | "switch" | "synchronized" | "then" | "this" | "throw" | "transient" | "try" | "undef" | "union" | "unless" | "unsigned" | "until" | "use" | "var" | "virtual" | "volatile" | "when" | "while" | "with" | "xor" | "yield")
+  # reserved = ("BEGIN" | "END" | "__CLASS__" | "__DIR__" | "__FILE__" | "__FUNCTION__" | "__LINE__" | "__METHOD__" | "__NAMESPACE__" | "abstract" | "alias" | "and" | "args" | "as" | "assert" | "begin" | "break" | "case" | "catch" | "class" | "clone" | "continue" | "declare" | "def" | "default" | "del" | "delete" | "do" | "dynamic" | "elif" | "else" | "elseif" | "elsif" | "end" | "enddeclare" | "endfor" | "endforeach" | "endif" | "endswitch" | "endwhile" | "ensure" | "except" | "exec" | "finally" | "float" | "for" | "foreach" | "function" | "global" | "goto" | "if" | "implements" | "import" | "in" | "inline" | "instanceof" | "interface" | "is" | "lambda" | "module" | "native" | "new" | "next" | "nil" | "not" | "or" | "pass" | "public" | "print" | "private" | "protected" | "public" | "raise" | "redo" | "rescue" | "retry" | "register" | "return" | "self" | "sizeof" | "static" | "super" | "switch" | "synchronized" | "then" | "this" | "throws" | "transient" | "try" | "undef" | "union" | "unless" | "unsigned" | "until" | "use" | "var" | "virtual" | "volatile" | "when" | "while" | "with" | "xor" | "yield")
   def _reserved
 
     _save = self.pos
@@ -876,7 +876,7 @@ class Stark::Parser
       _tmp = match_string("this")
       break if _tmp
       self.pos = _save
-      _tmp = match_string("throw")
+      _tmp = match_string("throws")
       break if _tmp
       self.pos = _save
       _tmp = match_string("transient")
@@ -3230,12 +3230,12 @@ class Stark::Parser
     return _tmp
   end
 
-  # Throws = - "throws" - "(" FieldList ")"
+  # Throws = osp "throws" osp "(" FieldList ")"
   def _Throws
 
     _save = self.pos
     while true # sequence
-      _tmp = apply(:__hyphen_)
+      _tmp = apply(:_osp)
       unless _tmp
         self.pos = _save
         break
@@ -3245,7 +3245,7 @@ class Stark::Parser
         self.pos = _save
         break
       end
-      _tmp = apply(:__hyphen_)
+      _tmp = apply(:_osp)
       unless _tmp
         self.pos = _save
         break
@@ -4029,7 +4029,7 @@ class Stark::Parser
   Rules[:_whitespace] = rule_info("whitespace", "/([ \\t\\r\\n]*)/")
   Rules[:_st_identifier] = rule_info("st_identifier", "/([a-zA-Z-][\\.a-zA-Z_0-9-]*)/")
   Rules[:_literal_begin] = rule_info("literal_begin", "/(['\\\"])/")
-  Rules[:_reserved] = rule_info("reserved", "(\"BEGIN\" | \"END\" | \"__CLASS__\" | \"__DIR__\" | \"__FILE__\" | \"__FUNCTION__\" | \"__LINE__\" | \"__METHOD__\" | \"__NAMESPACE__\" | \"abstract\" | \"alias\" | \"and\" | \"args\" | \"as\" | \"assert\" | \"begin\" | \"break\" | \"case\" | \"catch\" | \"class\" | \"clone\" | \"continue\" | \"declare\" | \"def\" | \"default\" | \"del\" | \"delete\" | \"do\" | \"dynamic\" | \"elif\" | \"else\" | \"elseif\" | \"elsif\" | \"end\" | \"enddeclare\" | \"endfor\" | \"endforeach\" | \"endif\" | \"endswitch\" | \"endwhile\" | \"ensure\" | \"except\" | \"exec\" | \"finally\" | \"float\" | \"for\" | \"foreach\" | \"function\" | \"global\" | \"goto\" | \"if\" | \"implements\" | \"import\" | \"in\" | \"inline\" | \"instanceof\" | \"interface\" | \"is\" | \"lambda\" | \"module\" | \"native\" | \"new\" | \"next\" | \"nil\" | \"not\" | \"or\" | \"pass\" | \"public\" | \"print\" | \"private\" | \"protected\" | \"public\" | \"raise\" | \"redo\" | \"rescue\" | \"retry\" | \"register\" | \"return\" | \"self\" | \"sizeof\" | \"static\" | \"super\" | \"switch\" | \"synchronized\" | \"then\" | \"this\" | \"throw\" | \"transient\" | \"try\" | \"undef\" | \"union\" | \"unless\" | \"unsigned\" | \"until\" | \"use\" | \"var\" | \"virtual\" | \"volatile\" | \"when\" | \"while\" | \"with\" | \"xor\" | \"yield\")")
+  Rules[:_reserved] = rule_info("reserved", "(\"BEGIN\" | \"END\" | \"__CLASS__\" | \"__DIR__\" | \"__FILE__\" | \"__FUNCTION__\" | \"__LINE__\" | \"__METHOD__\" | \"__NAMESPACE__\" | \"abstract\" | \"alias\" | \"and\" | \"args\" | \"as\" | \"assert\" | \"begin\" | \"break\" | \"case\" | \"catch\" | \"class\" | \"clone\" | \"continue\" | \"declare\" | \"def\" | \"default\" | \"del\" | \"delete\" | \"do\" | \"dynamic\" | \"elif\" | \"else\" | \"elseif\" | \"elsif\" | \"end\" | \"enddeclare\" | \"endfor\" | \"endforeach\" | \"endif\" | \"endswitch\" | \"endwhile\" | \"ensure\" | \"except\" | \"exec\" | \"finally\" | \"float\" | \"for\" | \"foreach\" | \"function\" | \"global\" | \"goto\" | \"if\" | \"implements\" | \"import\" | \"in\" | \"inline\" | \"instanceof\" | \"interface\" | \"is\" | \"lambda\" | \"module\" | \"native\" | \"new\" | \"next\" | \"nil\" | \"not\" | \"or\" | \"pass\" | \"public\" | \"print\" | \"private\" | \"protected\" | \"public\" | \"raise\" | \"redo\" | \"rescue\" | \"retry\" | \"register\" | \"return\" | \"self\" | \"sizeof\" | \"static\" | \"super\" | \"switch\" | \"synchronized\" | \"then\" | \"this\" | \"throws\" | \"transient\" | \"try\" | \"undef\" | \"union\" | \"unless\" | \"unsigned\" | \"until\" | \"use\" | \"var\" | \"virtual\" | \"volatile\" | \"when\" | \"while\" | \"with\" | \"xor\" | \"yield\")")
   Rules[:_tok_int_constant] = rule_info("tok_int_constant", "(< intconstant > { text.to_i } | < hexconstant > { text.to_i } | \"false\" { 0 } | \"true\" { 1 })")
   Rules[:_tok_dub_constant] = rule_info("tok_dub_constant", "dubconstant:f { f.to_f }")
   Rules[:_tok_identifier] = rule_info("tok_identifier", "< identifier > {text}")
@@ -4082,7 +4082,7 @@ class Stark::Parser
   Rules[:_FunctionList] = rule_info("FunctionList", "(FunctionList:l Function:f { l + [f] } | Function:f { [f] })")
   Rules[:_Function] = rule_info("Function", "CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name osp \"(\" FieldList?:args \")\" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t, o)}")
   Rules[:_OneWay] = rule_info("OneWay", "(\"oneway\" | \"async\") - { :oneway }")
-  Rules[:_Throws] = rule_info("Throws", "- \"throws\" - \"(\" FieldList \")\"")
+  Rules[:_Throws] = rule_info("Throws", "osp \"throws\" osp \"(\" FieldList \")\"")
   Rules[:_FieldList] = rule_info("FieldList", "(FieldList:l Field:f { l + [f] } | Field:f { [f] })")
   Rules[:_Field] = rule_info("Field", "CaptureDocText FieldIdentifier?:i osp FieldRequiredness?:req osp FieldType:t osp tok_identifier:n osp FieldValue?:val CommaOrSemicolonOptional {field(i,t,n,val,req)}")
   Rules[:_FieldIdentifier] = rule_info("FieldIdentifier", "tok_int_constant:n \":\" {n}")

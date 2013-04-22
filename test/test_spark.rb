@@ -45,4 +45,12 @@ class TestSpark < Test::Unit::TestCase
     assert TestSparkScope.const_defined?(:Foo)
   end
 
+  def test_materialize_service_with_throws
+    file_path = File.join(File.dirname(__FILE__), 'types.thrift')
+    assert_nothing_raised do
+      Stark.materialize file_path, TestSparkScope
+    end
+    assert TestSparkScope.const_defined?(:Types)
+  end
+
 end

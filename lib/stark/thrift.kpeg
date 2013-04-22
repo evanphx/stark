@@ -122,7 +122,7 @@ reserved =
   "synchronized"       |
   "then"               |
   "this"               |
-  "throw"              |
+  "throws"             |
   "transient"          |
   "try"                |
   "undef"              |
@@ -279,7 +279,7 @@ Function = CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name
 
 OneWay = ("oneway" | "async") - { :oneway }
 
-Throws = - "throws" - "(" FieldList ")"
+Throws = osp "throws" osp "(" FieldList ")"
 
 FieldList = FieldList:l Field:f { l + [f] }
           | Field:f { [f] }
