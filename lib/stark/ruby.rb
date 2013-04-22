@@ -12,7 +12,6 @@ module Stark
 
       @stream = stream
 
-
       o "require 'set'"
       o "require 'stark/client'"
       o "require 'stark/struct'"
@@ -22,7 +21,43 @@ module Stark
       o "require 'stark/exception'"
     end
 
+    def collect_types(ast)
+      type_collector = lambda do |m,*args|
+        case m
+        when /namespace/
+          ns = args.first
+          return unless [nil, 'rb'].include?(ns.lang)
+          @namespace = ns.namespace.gsub('.', '::')
+          parts = @namespace.split('::')
+          if parts.length > 1
+            0.upto(parts.length - 2) do |i|
+              o "module #{parts[0..i].join('::')}; end unless defined?(#{parts[0..i].join('::')})"
+            end
+          end
+          o
+          o "module #{@namespace}"
+          indent
+        when /enum/
+          enum = args.first
+          o "Enum_#{enum.name} = Hash.new { |h,k| p [:bad, k]; h[k] = -1 }"
+          @enums[enum.name] = enum
+        when /struct$/
+          str = args.first
+          o "class #{str.name} < Stark::Struct; end"
+          @structs[str.name] = str
+        when /exception$/
+          str = args.first
+          o "class #{str.name} < Stark::Exception; end"
+          @exceptions[str.name] = str
+        end
+      end
+      type_collector.instance_eval { def method_missing(*args); call *args; end }
+      ast.each { |a| a.accept type_collector }
+    end
+
     def run(ast)
+      collect_types ast
+      o "# Types declared above; defined below"
       ast.each { |a| a.accept self }
       close
     end
@@ -35,16 +70,6 @@ module Stark
     end
 
     def process_namespace(ns)
-      return unless [nil, 'rb'].include?(ns.lang)
-      @namespace = ns.namespace.gsub('.', '::')
-      parts = @namespace.split('::')
-      if parts.length > 1
-        0.upto(parts.length - 2) do |i|
-          o "module #{parts[0..i].join('::')}; end unless defined?(#{parts[0..i].join('::')})"
-        end
-      end
-      o "module #{@namespace}"
-      indent
     end
 
     def process_include(inc)
@@ -52,16 +77,12 @@ module Stark
 
     def process_enum(enum)
       e = "Enum_#{enum.name}"
-      o "#{e} = Hash.new { |h,k| p [:bad, k]; h[k] = -1 }"
-
       idx = 0
       enum.values.each do |f|
         o "#{e}[#{idx}] = :'#{f}'"
         o "#{e}[:'#{f}'] = #{idx}"
         idx += 1
       end
-
-      @enums[enum.name] = enum
     end
 
     def converter(t)
@@ -83,8 +104,6 @@ module Stark
     end
 
     def process_struct(str)
-      @structs[str.name] = str
-
       o "class #{str.name} < Stark::Struct"
       indent
       o "Fields = {"
@@ -107,14 +126,11 @@ module Stark
 
       outdent
       o "end"
-
     end
 
     BUILTINS = %w!bool byte i16 i32 i64 double string!
 
     def process_exception(str)
-      @exceptions[str.name] = str
-
       o "class #{str.name} < Stark::Exception"
       indent
 
@@ -130,8 +146,8 @@ module Stark
       o "end"
     end
 
-    def o(str)
-      @stream.print(" " * @indent)
+    def o(str = nil)
+      @stream.print(" " * @indent) if str
       @stream.puts str
     end
 

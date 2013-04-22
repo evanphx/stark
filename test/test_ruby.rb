@@ -59,9 +59,10 @@ struct Bar {
 
     stream = StringIO.new
     ruby = Stark::Ruby.new stream
-    e = assert_raise RuntimeError do
-      ruby.run ast
-    end
-    assert_equal 'Unknown type <Bar>', e.message
+    ruby.run ast
+    ns = Module.new
+    ns.module_eval stream.string
+    assert ns::Foo
+    assert ns::Bar
   end
 end
