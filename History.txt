@@ -1,3 +1,12 @@
+=== Release.next / date
+
+* Allow circular definitions
+* Catch and log unexpected exceptions
+* Add attr_writers for structs
+* Fixes to support comments
+* Add map and set support
+* Support structs in lists
+
 === 0.7.0 / 2013-03-04
 
 * 5 bugfixes:
