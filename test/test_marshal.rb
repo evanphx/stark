@@ -83,8 +83,14 @@ class TestMarshal < Test::Unit::TestCase
   end
 
   def test_returning_a_set
-    require 'prime'
-    primes = Prime::instance.each(256).to_a
+    primes = begin
+               require 'prime'
+               Prime::instance.each(256).to_a
+             rescue LoadError
+               require 'mathn'
+               p = Prime.new
+               [].tap {|arr| 256.times { arr << p.next } }
+             end
     @handler.set_all_types create_all_types(:a_set => primes + primes)
 
     at = send_to_server do
