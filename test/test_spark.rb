@@ -53,4 +53,14 @@ class TestSpark < Test::Unit::TestCase
     assert TestSparkScope.const_defined?(:Types)
   end
 
+  def test_materialize_with_stringio
+    file_path = File.join(File.dirname(__FILE__), 'types.thrift')
+    io = StringIO.new(File.read(file_path))
+    m = Module.new
+    assert_nothing_raised do
+      Stark.materialize io, m
+    end
+    assert m.const_defined?(:Types)
+  end
+
 end
