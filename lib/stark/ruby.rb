@@ -46,6 +46,7 @@ module Stark
     end
 
     def process_include(inc)
+      raise NotImplementedError, "include not implemented"
     end
 
     def process_enum(enum)
