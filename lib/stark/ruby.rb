@@ -25,6 +25,7 @@ module Stark
     end
 
     def close
+      write_protocol
       if @namespace
         outdent
         o "end"
@@ -73,6 +74,7 @@ module Stark
     def process_struct(str)
       @structs[str.name] = str
 
+      o
       o "class #{str.name} < Stark::Struct"
       indent
       write_field_declarations str.fields
@@ -85,6 +87,7 @@ module Stark
     def process_exception(str)
       @exceptions[str.name] = str
 
+      o
       o "class #{str.name} < Stark::Exception"
       indent
       write_field_declarations str.fields
@@ -282,6 +285,7 @@ module Stark
       o "include Protocol"
 
       serv.functions.each do |func|
+        o
         o "def process_#{func.name}(seqid, ip, op)"
         indent
 
@@ -353,10 +357,12 @@ module Stark
       o "end"
     end
 
-    def write_protocol(serv)
+    def write_protocol
+      o
       o "module Protocol"
       indent
       @structs.merge(@exceptions).each do |name, struct|
+        o
         o "def read_#{name}(ip)"
         indent
         o "obj = #{name}.new"
@@ -383,7 +389,7 @@ module Stark
         o "obj"
         outdent
         o "end"
-
+        o
         o "def write_#{name}(op, str)"
         indent
         o "op.write_struct_begin '#{name}'"
@@ -413,6 +419,7 @@ module Stark
       serv.functions.each do |func|
         names = Array(func.arguments).map { |f| f.name }.join(", ")
 
+        o
         o "def #{func.name}(#{names})"
         indent
         o "op = @oprot"
@@ -485,13 +492,18 @@ module Stark
     end
 
     def process_service(serv)
+      unless @protocol_declared
+        o
+        o "module Protocol; end"
+        @protocol_declared = true
+      end
+
+      o
       o "module #{serv.name}"
       indent
 
-      write_protocol serv
-
       write_client serv
-
+      o
       write_processor serv
 
       outdent
