@@ -82,8 +82,6 @@ module Stark
       o "end"
     end
 
-    BUILTINS = %w!bool byte i16 i32 i64 double string!
-
     def process_exception(str)
       @exceptions[str.name] = str
 
@@ -116,6 +114,7 @@ module Stark
       'i32' => "::Thrift::Types::I32",
       'i64' => "::Thrift::Types::I64",
       'string' => '::Thrift::Types::STRING',
+      'binary' => '::Thrift::Types::STRING',
       'struct' => '::Thrift::Types::STRUCT',
       'map' => '::Thrift::Types::MAP',
       'set' => '::Thrift::Types::SET',
@@ -130,6 +129,7 @@ module Stark
       'i32' => "read_i32",
       'i64' => "read_i64",
       'string' => 'read_string',
+      'binary' => 'read_string',
     }
 
     WriteFunc = {
@@ -140,6 +140,7 @@ module Stark
       'i32' => "write_i32",
       'i64' => "write_i64",
       'string' => 'write_string',
+      'binary' => 'write_string',
     }
 
     def type(t)
