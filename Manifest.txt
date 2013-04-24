@@ -38,11 +38,12 @@ test/parsing_error.thrift
 test/profile.thrift
 test/properties.thrift
 test/test_client.rb
+test/test_coerce_strings.rb
 test/test_helper.rb
 test/test_marshal.rb
 test/test_parser.rb
 test/test_ruby.rb
 test/test_server.rb
-test/test_spark.rb
+test/test_stark.rb
 test/types.thrift
 test/users.thrift
