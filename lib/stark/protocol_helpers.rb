@@ -3,6 +3,19 @@ module Stark
     def expect(ip, expected, actual)
       if expected == actual
         yield
+      elsif actual == ::Thrift::Types::STRING
+        value = ip.read_string
+        case expected
+        when ::Thrift::Types::BOOL
+          value =~ /^(1|y|t|on)/ ? true : false
+        when ::Thrift::Types::BYTE, ::Thrift::Types::I16,
+          ::Thrift::Types::I32, ::Thrift::Types::I64
+          value.to_i
+        when ::Thrift::Types::DOUBLE
+          value.to_f
+        else
+          nil
+        end
       else
         ip.skip actual unless actual == ::Thrift::Types::STOP
         nil
