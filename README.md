@@ -120,7 +120,7 @@ namespace.
 
 ### Debugging
 
-Spark will output some valuable (albeit verbose) debugging information
+Stark will output some valuable (albeit verbose) debugging information
 if you set the `STARK_DEBUG` environment variable.
 
 ```
