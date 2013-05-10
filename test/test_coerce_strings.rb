@@ -66,7 +66,7 @@ class TestCoerceStrings2 < Test::Unit::TestCase
       @client_p.write_field_begin "a", Thrift::Types::STRING, 1
       @client_p.write_string "1"
       @client_p.write_field_end
-      @client_p.write_field_begin "b", Thrift::Types::STRING, 1
+      @client_p.write_field_begin "b", Thrift::Types::STRING, 2
       @client_p.write_string "1"
       @client_p.write_field_end
       @client_p.write_field_stop

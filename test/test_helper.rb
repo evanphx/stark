@@ -31,6 +31,7 @@ module TestHelper
   end
 
   def teardown
+    print @log_stream.string unless passed?
     Stark.logger = @prev_logger
     @client_t.close
     @server_t.close

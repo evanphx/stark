@@ -292,18 +292,32 @@ module Stark
 
         o "ip.read_struct_begin"
         args = Array(func.arguments)
-        o "args = Array.new(#{args.size})"
+        o "fields = {}"
 
-        args.each do |arg|
-          o "_, rtype, rid = ip.read_field_begin"
-          read_type arg.type, "args[#{arg.index - 1}]"
-          o "ip.read_field_end"
+        o "while true"
+        o "  _, ftype, fid = ip.read_field_begin"
+        o "  break if ftype == ::Thrift::Types::STOP"
+
+        if args.empty?
+          o "  ip.skip ftype"
+        else
+          o "  case fid"
+          args.each do |arg|
+            o "  when #{arg.index}"
+            indent; indent
+            read_type arg.type, "fields[#{arg.index}]", "ftype"
+            outdent; outdent
+          end
+          o "  else"
+          o "    ip.skip ftype"
+          o "  end"
         end
-
-        o "_, rtype, _ = ip.read_field_begin"
-        o "fail unless rtype == ::Thrift::Types::STOP"
+        o "  ip.read_field_end"
+        o "end"
         o "ip.read_struct_end"
         o "ip.read_message_end"
+
+        o "args = #{args.map(&:index).inspect}.inject([]) {|arr,i| arr << fields[i] }"
 
         if t = func.throws
           o "begin"
