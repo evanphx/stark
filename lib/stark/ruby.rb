@@ -66,7 +66,13 @@ module Stark
       max_field_len = fields.inject(0) {|max,f| f.name.length > max ? f.name.length : max }
       max_index_len = fields.inject(0) {|max,f| f.index.to_s.length > max ? f.index.to_s.length : max }
 
+      current_index = 1
       fields.each do |f|
+        if f.index != current_index
+          o "field_number #{f.index}"
+          current_index = f.index
+        end
+        current_index += 1
         o("attr_accessor :%-*s  # %*s: %s" % [max_field_len, f.name, max_index_len, f.index, object_type(f.type)])
       end
     end
