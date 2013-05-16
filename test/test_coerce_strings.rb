@@ -107,4 +107,81 @@ class TestCoerceStrings2 < Test::Unit::TestCase
 
     assert_equal ["1", "2", "3"], @handler.last_list
   end
+
+  def test_coerce_strings_on_write_parameter
+    @handler.store @n::UserProfile.new(:uid => 123, :name => "Gob")
+
+    profile = send_to_server do
+      @client.retrieve "123"
+    end
+
+    assert profile
+    assert_equal "Gob", profile.name
+  end
+
+  def test_coerce_strings_on_write_struct_field
+    send_to_server do
+      @client.set_user_friends @n::UserFriends.new(:user => "123")
+    end
+
+    assert @handler.user_friends
+    assert_equal 123, @handler.user_friends.user
+  end
+
+  def test_coercion_fails_on_write_with_incompatible_types
+    assert_raises TypeError do
+      @client.store "user_profile"
+    end
+  end
+
+  class BadTypesHandler
+    def initialize(n)
+      @n = n
+    end
+
+    def retrieve(uid)
+      @n::UserProfile.new(:uid => "123", :name => 123)
+    end
+
+    def volume_up
+      "11"
+    end
+  end
+
+  def test_coerce_strings_on_processor_write_struct_field
+    set_handler BadTypesHandler.new(@n)
+
+    profile = send_to_server do
+      @client.retrieve 123
+    end
+
+    assert profile
+    assert_equal "123", profile.name
+  end
+
+  def test_coerce_strings_on_processor_write_return_value
+    set_handler BadTypesHandler.new(@n)
+
+    vol = send_to_server do
+      @client.volume_up
+    end
+
+    assert vol
+    assert_equal 11, vol
+  end
+
+  def test_coercion_fails_on_processor_write_with_incompatible_types
+    set_handler Object.new.tap {|h|
+      def h.retrieve(uid)
+        "user_profile"
+      end
+    }
+
+    assert_raises Thrift::ApplicationException do
+      send_to_server do
+        @client.retrieve 123
+      end
+    end
+  end
+
 end

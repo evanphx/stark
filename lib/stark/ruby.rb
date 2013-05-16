@@ -169,6 +169,12 @@ module Stark
       end
     end
 
+    def wire_type_and_ruby_type(t)
+      return "::Thrift::Types::STRUCT, #{t}" if @structs[t] || @exceptions[t]
+      return "::Thrift::Types::I32, Enum_#{t}" if @enums[t]
+      wire_type(t)
+    end
+
     def object_type(t)
       case t
       when Stark::Parser::AST::Map
@@ -355,13 +361,18 @@ module Stark
           next
         end
 
+        ft = func.return_type
+        o "result = value_for_write(result, #{wire_type_and_ruby_type(ft)})" if ft != "void"
+
         o "op.write_message_begin '#{func.name}', ::Thrift::MessageTypes::REPLY, seqid"
         o "op.write_struct_begin '#{func.name}_result'"
 
-        ft = func.return_type
-
         if ft != "void"
+          o "if result"
+          indent
           write_field ft, 'result', 0
+          outdent
+          o "end"
         end
 
         o "op.write_field_stop"
@@ -416,7 +427,7 @@ module Stark
         o "op.write_struct_begin '#{name}'"
 
         struct.fields.each do |f|
-          o "if #{f.name} = str.#{f.name}"
+          o "if #{f.name} = value_for_write(str.#{f.name}, #{wire_type_and_ruby_type(f.type)})"
           indent
           write_field f.type, f.name, f.index
           outdent
@@ -448,6 +459,7 @@ module Stark
         o "op.write_struct_begin \"#{func.name}_args\""
 
         Array(func.arguments).each do |arg|
+          o "#{arg.name} = value_for_write #{arg.name}, #{wire_type_and_ruby_type(arg.type)}"
           write_field arg.type, arg.name, arg.index
         end
 
@@ -487,14 +499,18 @@ module Stark
           o "end"
         end
 
-        o "fail unless rid == 0"
-
         o "result = nil"
 
+        o "fail unless rid == 0"
+
         if func.return_type != "void"
+          o "if rtype != ::Thrift::Types::STOP"
+          indent
           read_type func.return_type, "result"
           o "ip.read_field_end"
-          o "_, rtype, rid = ip.read_field_begin unless rtype == ::Thrift::Types::STOP"
+          o "_, rtype, rid = ip.read_field_begin"
+          outdent
+          o "end"
         end
 
         o "fail if rtype != ::Thrift::Types::STOP"

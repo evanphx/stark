@@ -75,7 +75,7 @@ class TestServer < Test::Unit::TestCase
 
   def test_last_list_is_nil
     send_to_server do
-      assert_equal [], @client.last_list
+      assert_equal nil, @client.last_list
     end
   end
 

@@ -90,5 +90,72 @@ module Stark
 
       raise TypeError, "Unable to convert #{obj.class} to Hash"
     end
+
+    THRIFT_TO_RUBY = {
+      ::Thrift::Types::BOOL => [TrueClass, FalseClass, NilClass],
+      ::Thrift::Types::BYTE => [Fixnum],
+      ::Thrift::Types::I16 => [Fixnum],
+      ::Thrift::Types::I32 => [Fixnum],
+      ::Thrift::Types::I64 => [Fixnum],
+      ::Thrift::Types::DOUBLE => [Float],
+      ::Thrift::Types::STRING => [String],
+      ::Thrift::Types::MAP    => [Hash],
+      ::Thrift::Types::SET    => [Set],
+      ::Thrift::Types::LIST   => [Array]
+    }
+
+    def value_for_write(val, expected, additional = nil)
+      return val if val.nil?
+
+      ruby_types = nil
+      if additional
+        case expected
+        when ::Thrift::Types::STRUCT
+          if Class === additional && # Struct or Exception
+            (additional < Stark::Struct || additional < Stark::Exception)
+            ruby_types = [additional]
+          end
+        when ::Thrift::Types::I32
+          if Hash === additional # Enum hash
+            ruby_types = [Symbol]
+          end
+        end
+      else
+        ruby_types = THRIFT_TO_RUBY[expected]
+      end
+
+      raise TypeError, "Unknown Thrift type #{expected}" unless ruby_types
+
+      return val if ruby_types.any? {|t| t === val }
+
+      if String === val
+        obj = COERCION_FROM_STRING[expected][val]
+        raise TypeError, "Cannot coerce #{val.class} to #{ruby_types.join(' ')}" unless obj
+        return obj
+      end
+
+      case expected
+      when ::Thrift::Types::BOOL
+        return val
+      when ::Thrift::Types::STRING
+        return val.to_s
+      when ::Thrift::Types::MAP
+        return val.to_hash if val.respond_to?(:to_hash)
+      when ::Thrift::Types::SET
+        return Set.new(val.to_a) if val.respond_to?(:to_a)
+      when ::Thrift::Types::LIST
+        return val.to_a if val.respond_to?(:to_a)
+      when ::Thrift::Types::BYTE, ::Thrift::Types::I16, ::Thrift::Types::I64
+        return val.to_i if val.respond_to?(:to_i)
+      when ::Thrift::Types::I32
+        if Hash === additional # Enum hash
+          return val.to_sym if val.respond_to?(:to_sym)
+        end
+        return additional[val.to_i] if val.respond_to?(:to_i)
+      when ::Thrift::Types::DOUBLE
+        return val.to_f if val.respond_to?(:to_f)
+      end
+      raise TypeError, "Unexpected type #{val.class} (#{val.inspect}); was expecting #{ruby_types.join(' ')}"
+    end
   end
 end
