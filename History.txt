@@ -1,11 +1,21 @@
-=== Release.next / date
+=== 0.8.0 / 2013-05-22
 
-* Allow circular definitions
-* Catch and log unexpected exceptions
-* Add attr_writers for structs
-* Fixes to support comments
-* Add map and set support
-* Support structs in lists
+* 9 new features:
+
+  * Allow circular definitions
+  * Add attr_accessor for structs
+  * Add map and set support
+  * Support structs in lists
+  * Add dotted namespace support
+  * Only serialize fields that are present
+  * Add coercion to/from strings on read
+  * Add coercion and type checking on write
+  * Add Struct#[] and Struct#to_hash
+
+* 2 bugfixes:
+
+  * Fixes to support comments in more places
+  * Catch and log unexpected exceptions
 
 === 0.7.0 / 2013-03-04
 
