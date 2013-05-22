@@ -1,6 +1,6 @@
 # stark [![Build Status](https://travis-ci.org/evanphx/stark.png)](https://travis-ci.org/evanphx/stark)
 
-* http://github.com/evanphx/stark 
+* http://github.com/evanphx/stark
 
 ## DESCRIPTION:
 
@@ -114,7 +114,7 @@ The newly generated `GetUser` class is now generated under the provided
 namespace: `MyApp::GetUser`.
 
 Note that materializing a thrift file from within a module or a class
-will still generate the code at the top level unless you specify a 
+will still generate the code at the top level unless you specify a
 namespace.
 
 
@@ -125,7 +125,7 @@ if you set the `STARK_DEBUG` environment variable.
 
 ```
 $ STARK_DEBUG=true ruby code_using_stark.rb
-``` 
+```
 
 ## DEVELOPERS:
 
