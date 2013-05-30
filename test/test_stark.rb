@@ -64,4 +64,12 @@ class TestStark < Test::Unit::TestCase
     assert @m.const_defined?(:Types)
   end
 
+  def test_include_in_same_dir_not_working_dir
+    Dir.chdir(File.dirname(__FILE__) + '/../') do
+      file_path = File.join(File.dirname(__FILE__), 'include_blah.thrift')
+      assert_nothing_raised do
+        Stark.materialize file_path, @m
+      end
+    end
+  end
 end

@@ -1,1 +1,1 @@
-include "test/blah.thrift"
+include "blah.thrift"
