@@ -138,6 +138,27 @@ EOM
     assert_equal({:str => "hi", :int => 20}, foo.to_hash)
   end
 
+  def test_to_struct_to_hash_nested
+    ruby = create_ruby <<-EOM, :only_ast => true
+struct Bar {
+1: string blah
+}
+struct Foo {
+1:string str
+2:list<Bar> bars
+3:i32 int
+}
+EOM
+
+    ns = Module.new
+    ns.module_eval ruby
+    assert ns::Foo
+
+    foo = ns::Foo.new :str => "hi", :int => 20
+    foo.bars = [ns::Bar.new(:blah => "baz")]
+    assert_equal({:str => "hi", :int => 20, :bars => [{:blah => "baz"}]}, foo.to_hash)
+  end
+
   def test_to_struct_aref
     ruby = create_ruby <<-EOM, :only_ast => true
 struct Foo {
