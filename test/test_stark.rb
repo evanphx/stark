@@ -39,7 +39,7 @@ class TestStark < Test::Unit::TestCase
     assert @m.const_defined?(:FavoriteUsers)
   end
 
-  def test_materialize_service_with_comments
+  def test_materialize_service_with_comments_and_no_ending_newline
     file_path = File.join(File.dirname(__FILE__), 'comments.thrift')
     assert_nothing_raised do
       Stark.materialize file_path, @m
