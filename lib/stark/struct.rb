@@ -27,7 +27,12 @@ module Stark
       {}.tap do |hash|
         self.class.fields.each do |idx,name|
           v = send name
-          hash[name] = v if v
+          case v
+          when Array
+            hash[name] = v.map(&:to_hash)
+          else
+            hash[name] = v if v
+          end
         end
       end
     end
