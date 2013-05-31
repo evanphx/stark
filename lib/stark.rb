@@ -28,7 +28,7 @@ module Stark
     require 'stringio'
 
     begin
-      contents = file.respond_to?(:read) ? file.read : File.read(file)
+      contents = Stark::Parser.read_file(file)
       ast = Stark::Parser.ast contents
     rescue => e
       raise e, e.message + " while processing #{file} -\n#{e.backtrace.join("\n")}"
