@@ -16,8 +16,8 @@ Hoe.spec 'stark' do
   readme_file = "README.md"
 end
 
+desc 'Run kpeg to generate new parser'
 task :parser do
   sh "kpeg -o lib/stark/raw_parser.rb -s -f lib/stark/thrift.kpeg"
 end
-
 # vim: syntax=ruby

@@ -1669,7 +1669,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # Element = (Comment | obsp Header bsp | Definition bsp)
+  # Element = (Comment | obsp Header bsp | Definition obsp)
   def _Element
 
     _save = self.pos
@@ -1707,7 +1707,7 @@ class Stark::Parser
           self.pos = _save2
           break
         end
-        _tmp = apply(:_bsp)
+        _tmp = apply(:_obsp)
         unless _tmp
           self.pos = _save2
         end
@@ -4049,7 +4049,7 @@ class Stark::Parser
   Rules[:_CaptureDocText] = rule_info("CaptureDocText", "{}")
   Rules[:_DestroyDocText] = rule_info("DestroyDocText", "{}")
   Rules[:_HeaderList] = rule_info("HeaderList", "(HeaderList Header | Header)")
-  Rules[:_Element] = rule_info("Element", "(Comment | obsp Header bsp | Definition bsp)")
+  Rules[:_Element] = rule_info("Element", "(Comment | obsp Header bsp | Definition obsp)")
   Rules[:_Header] = rule_info("Header", "(Include | Namespace)")
   Rules[:_Namespace] = rule_info("Namespace", "(\"namespace\" - tok_identifier:l - tok_identifier:n {namespace(l,n)} | \"namespace\" - \"*\" - tok_identifier:n {namespace(nil,n)})")
   Rules[:_Include] = rule_info("Include", "\"include\" - tok_literal:f {include(f)}")
