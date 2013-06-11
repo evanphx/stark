@@ -30,6 +30,8 @@ module Stark
           case v
           when Array
             hash[name] = v.map(&:to_hash)
+          when Struct
+            hash[name] = v.to_hash
           else
             hash[name] = v if v
           end
