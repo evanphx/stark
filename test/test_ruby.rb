@@ -143,10 +143,14 @@ EOM
 struct Bar {
 1: string blah
 }
+struct Quux {
+1: i32 int
+}
 struct Foo {
 1:string str
 2:list<Bar> bars
 3:i32 int
+4:Quux q
 }
 EOM
 
@@ -156,7 +160,8 @@ EOM
 
     foo = ns::Foo.new :str => "hi", :int => 20
     foo.bars = [ns::Bar.new(:blah => "baz")]
-    assert_equal({:str => "hi", :int => 20, :bars => [{:blah => "baz"}]}, foo.to_hash)
+    foo.q = ns::Quux.new(:int => 42)
+    assert_equal({:str => "hi", :int => 20, :bars => [{:blah => "baz"}], :q => {:int => 42}}, foo.to_hash)
   end
 
   def test_to_struct_aref
