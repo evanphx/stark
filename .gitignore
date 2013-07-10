@@ -1,2 +1,4 @@
-scratch
+.bundle
+bin/
 pkg/
+scratch

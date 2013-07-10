@@ -29,7 +29,7 @@ module Stark
           v = send name
           case v
           when Array
-            hash[name] = v.map(&:to_hash)
+            hash[name] = v.map { |o| o.respond_to?(:to_hash) ? o.to_hash : o  }
           when Struct
             hash[name] = v.to_hash
           else
