@@ -164,6 +164,21 @@ EOM
     assert_equal({:str => "hi", :int => 20, :bars => [{:blah => "baz"}], :q => {:int => 42}}, foo.to_hash)
   end
 
+  def test_to_hash_of_array_of_non_struct
+    ruby = create_ruby <<-EOM, :only_ast => true
+struct Foo {
+  1:list<i32> ints
+}
+EOM
+
+    ns = Module.new
+    ns.module_eval ruby
+    assert ns::Foo
+
+    foo = ns::Foo.new :ints => [1, 2]
+    assert_equal({:ints => [1, 2]}, foo.to_hash)
+  end
+
   def test_to_struct_aref
     ruby = create_ruby <<-EOM, :only_ast => true
 struct Foo {
