@@ -9,11 +9,13 @@ Hoe.plugin :travis
 Hoe.plugin :gemspec
 Hoe.plugin :git
 
-Hoe.spec 'stark' do
+Hoe.spec 'stark' do |spec|
   developer('Evan Phoenix', 'evan@phx.io')
 
   dependency "thrift", "~> 0.9.0"
   readme_file = "README.md"
+
+  spec.testlib = :testunit if spec.respond_to?(:testlib)
 end
 
 desc 'Run kpeg to generate new parser'
