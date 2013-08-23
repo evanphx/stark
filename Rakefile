@@ -13,7 +13,12 @@ Hoe.spec 'stark' do |spec|
   developer('Evan Phoenix', 'evan@phx.io')
 
   # thrift 0.9.1 had an unnecessary runtime dependency on thin
-  dependency "thrift", ["~> 0.9.0", "!= 0.9.1"]
+  version = ["~> 0.9.0", "!= 0.9.1"]
+  # this is to hack hoe to generate the correct gem install command
+  def version.to_s
+    self.join("' --version '")
+  end
+  dependency "thrift", version
   readme_file = "README.md"
 
   spec.testlib = :testunit if spec.respond_to?(:testlib)
