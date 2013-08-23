@@ -34,11 +34,17 @@ class Stark::Parser
   def self.read_file(file)
     @@include_path ||= Set.new([Dir.pwd])
     if file.respond_to?(:read)
-      @@include_path << File.dirname(File.expand_path(file.path, Dir.pwd)) if file.respond_to?(:path)
+      if file.respond_to?(:path) && file.path
+        @@include_path << File.dirname(File.expand_path(file.path, Dir.pwd))
+      end
       return file.read
     else
       @@include_path << File.dirname(File.expand_path(file, Dir.pwd))
-      fn = (@@include_path.map { |path| File.expand_path(file, path) }.detect { |fn| File.exist?(fn) }) || file
+      fn = (@@include_path.map {|path|
+              File.expand_path(file, path)
+            }.detect { |fn|
+              File.exist?(fn)
+            }) || file
       File.read fn
     end
   end
