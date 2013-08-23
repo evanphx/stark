@@ -1,3 +1,8 @@
+require 'test/unit'
+
+require 'stark'
+require 'thrift'
+
 require 'test/test_helper'
 
 class TestCoerceStrings1 < Test::Unit::TestCase

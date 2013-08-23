@@ -1,8 +1,15 @@
-require 'test/test_helper'
+require 'test/unit'
+
+require 'stark'
+
+require 'rubygems'
+require 'thrift'
 
 $: << "test/legacy_profile"
 
 require 'user_storage'
+
+require 'test/test_helper'
 
 class TestClient < Test::Unit::TestCase
   IDL = "test/profile.thrift"

@@ -12,7 +12,8 @@ Hoe.plugin :git
 Hoe.spec 'stark' do |spec|
   developer('Evan Phoenix', 'evan@phx.io')
 
-  dependency "thrift", "~> 0.9.0"
+  # thrift 0.9.1 had an unnecessary runtime dependency on thin
+  dependency "thrift", ["~> 0.9.0", "!= 0.9.1"]
   readme_file = "README.md"
 
   spec.testlib = :testunit if spec.respond_to?(:testlib)

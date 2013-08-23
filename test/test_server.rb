@@ -1,3 +1,10 @@
+require 'test/unit'
+
+require 'stark'
+
+require 'rubygems'
+require 'thrift'
+
 require 'test/test_helper'
 
 class TestServer < Test::Unit::TestCase
