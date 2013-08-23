@@ -1,3 +1,11 @@
+# Avoid loading thin_http_server which gets required automatically in thrift
+# 0.9.1
+$LOADED_FEATURES << 'thrift/server/thin_http_server.rb'
+
+require 'test/unit'
+require 'stark'
+require 'thrift'
+
 module TestHelper
   def setup_shared
     @client_t, @server_t = Stark.pipe_transport

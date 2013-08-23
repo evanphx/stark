@@ -1,8 +1,3 @@
-require 'test/unit'
-
-require 'stark'
-require 'thrift'
-
 require 'test/test_helper'
 
 class TestMarshal < Test::Unit::TestCase
