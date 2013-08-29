@@ -1,3 +1,17 @@
+=== 0.9.1 / 2013-08-29
+
+* 1 bugfix:
+
+  * Exclude thrift 0.9.1 from gem dependency
+
+=== 0.9.0 / 2013-06-11
+
+* 3 upgrades: 
+
+  * Recursive #to_hash on Structs
+  * Better path searching for includes in .thrift files
+  * Don't require final newline
+
 === 0.8.0 / 2013-05-22
 
 * 9 new features:
