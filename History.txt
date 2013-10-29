@@ -1,3 +1,10 @@
+=== 0.9.2 / 2013-10-29
+
+* 1 bugfix:
+
+  * more conservative Struct#to_hash, doesn't try to call #to_hash on Strings
+    (Greg Vaughn)
+
 === 0.9.1 / 2013-08-29
 
 * 1 bugfix:
