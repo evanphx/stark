@@ -1,3 +1,11 @@
+=== 0.9.3 / 2015-10-01
+
+* 1 bug fix:
+  * work for i32s in structs
+
+* 1 merged PR:
+  * Merge pull request #29 from spredfast/master
+
 === 0.9.2 / 2013-10-29
 
 * 1 bugfix:
