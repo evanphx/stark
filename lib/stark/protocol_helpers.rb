@@ -151,7 +151,11 @@ module Stark
         if Hash === additional # Enum hash
           return val.to_sym if val.respond_to?(:to_sym)
         end
-        return additional[val.to_i] if val.respond_to?(:to_i)
+        if additional
+          return additional[val.to_i] if val.respond_to?(:to_i)
+        else
+          return val.to_i
+        end
       when ::Thrift::Types::DOUBLE
         return val.to_f if val.respond_to?(:to_f)
       end
