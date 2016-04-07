@@ -13,8 +13,7 @@ class Stark::Parser
     # Prepares for parsing +str+.  If you define a custom initialize you must
     # call this method before #parse
     def setup_parser(str, debug=false)
-      @string = str
-      @pos = 0
+      set_string str, 0
       @memoizations = Hash.new { |h,k| h[k] = {} }
       @result = nil
       @failed_rule = nil
@@ -27,7 +26,6 @@ class Stark::Parser
     attr_reader :failing_rule_offset
     attr_accessor :result, :pos
 
-    
     def current_column(target=pos)
       if c = string.rindex("\n", target-1)
         return target - c - 1
@@ -59,6 +57,13 @@ class Stark::Parser
 
     def get_text(start)
       @string[start..@pos-1]
+    end
+
+    # Sets the string and current parsing position for the parser.
+    def set_string string, pos
+      @string = string
+      @string_size = string ? string.size : 0
+      @pos = pos
     end
 
     def show_pos
@@ -167,19 +172,19 @@ class Stark::Parser
       return nil
     end
 
-    if "".respond_to? :getbyte
+    if "".respond_to? :ord
       def get_byte
-        if @pos >= @string.size
+        if @pos >= @string_size
           return nil
         end
 
-        s = @string.getbyte @pos
+        s = @string[@pos].ord
         @pos += 1
         s
       end
     else
       def get_byte
-        if @pos >= @string.size
+        if @pos >= @string_size
           return nil
         end
 
@@ -228,8 +233,7 @@ class Stark::Parser
       old_pos = @pos
       old_string = @string
 
-      @pos = other.pos
-      @string = other.string
+      set_string other.string, other.pos
 
       begin
         if val = __send__(rule, *args)
@@ -240,8 +244,7 @@ class Stark::Parser
         end
         val
       ensure
-        @pos = old_pos
-        @string = old_string
+        set_string old_string, old_pos
       end
     end
 
@@ -494,60 +497,63 @@ class Stark::Parser
       attr_reader :fields
     end
   end
-  def comment(text)
-    AST::Comment.new(text)
+  module ASTConstruction
+    def comment(text)
+      AST::Comment.new(text)
+    end
+    def const_dbl(value)
+      AST::ConstDouble.new(value)
+    end
+    def const_id(value)
+      AST::ConstIdentifier.new(value)
+    end
+    def const_int(value)
+      AST::ConstInt.new(value)
+    end
+    def const_list(values)
+      AST::ConstList.new(values)
+    end
+    def const_map(values)
+      AST::ConstMap.new(values)
+    end
+    def const_str(value)
+      AST::ConstString.new(value)
+    end
+    def enum(name, values)
+      AST::Enum.new(name, values)
+    end
+    def exception(name, fields)
+      AST::Exception.new(name, fields)
+    end
+    def field(index, type, name, value, options)
+      AST::Field.new(index, type, name, value, options)
+    end
+    def function(name, return_type, arguments, throws, options)
+      AST::Function.new(name, return_type, arguments, throws, options)
+    end
+    def include(path)
+      AST::Include.new(path)
+    end
+    def list(value)
+      AST::List.new(value)
+    end
+    def map(key, value)
+      AST::Map.new(key, value)
+    end
+    def namespace(lang, namespace)
+      AST::Namespace.new(lang, namespace)
+    end
+    def service(name, functions)
+      AST::Service.new(name, functions)
+    end
+    def set(value)
+      AST::Set.new(value)
+    end
+    def struct(type, name, fields)
+      AST::Struct.new(type, name, fields)
+    end
   end
-  def const_dbl(value)
-    AST::ConstDouble.new(value)
-  end
-  def const_id(value)
-    AST::ConstIdentifier.new(value)
-  end
-  def const_int(value)
-    AST::ConstInt.new(value)
-  end
-  def const_list(values)
-    AST::ConstList.new(values)
-  end
-  def const_map(values)
-    AST::ConstMap.new(values)
-  end
-  def const_str(value)
-    AST::ConstString.new(value)
-  end
-  def enum(name, values)
-    AST::Enum.new(name, values)
-  end
-  def exception(name, fields)
-    AST::Exception.new(name, fields)
-  end
-  def field(index, type, name, value, options)
-    AST::Field.new(index, type, name, value, options)
-  end
-  def function(name, return_type, arguments, throws, options)
-    AST::Function.new(name, return_type, arguments, throws, options)
-  end
-  def include(path)
-    AST::Include.new(path)
-  end
-  def list(value)
-    AST::List.new(value)
-  end
-  def map(key, value)
-    AST::Map.new(key, value)
-  end
-  def namespace(lang, namespace)
-    AST::Namespace.new(lang, namespace)
-  end
-  def service(name, functions)
-    AST::Service.new(name, functions)
-  end
-  def set(value)
-    AST::Set.new(value)
-  end
-  def struct(type, name, fields)
-    AST::Struct.new(type, name, fields)
-  end
+  include ASTConstruction
   def setup_foreign_grammar; end
 
   # intconstant = /([+-]?[0-9]+)/
@@ -2127,7 +2133,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # EnumDef = (CaptureDocText tok_identifier "=" tok_int_constant CommaOrSemicolonOptional | CaptureDocText tok_identifier CommaOrSemicolonOptional)
+  # EnumDef = (CaptureDocText tok_identifier osp "=" osp tok_int_constant CommaOrSemicolonOptional | CaptureDocText tok_identifier CommaOrSemicolonOptional)
   def _EnumDef
 
     _save = self.pos
@@ -2145,7 +2151,17 @@ class Stark::Parser
           self.pos = _save1
           break
         end
+        _tmp = apply(:_osp)
+        unless _tmp
+          self.pos = _save1
+          break
+        end
         _tmp = match_string("=")
+        unless _tmp
+          self.pos = _save1
+          break
+        end
+        _tmp = apply(:_osp)
         unless _tmp
           self.pos = _save1
           break
@@ -2287,7 +2303,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # Const = "const" - FieldType tok_identifier "=" ConstValue CommaOrSemicolonOptional
+  # Const = "const" - FieldType tok_identifier osp "=" osp ConstValue CommaOrSemicolonOptional
   def _Const
 
     _save = self.pos
@@ -2312,7 +2328,17 @@ class Stark::Parser
         self.pos = _save
         break
       end
+      _tmp = apply(:_osp)
+      unless _tmp
+        self.pos = _save
+        break
+      end
       _tmp = match_string("=")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_osp)
       unless _tmp
         self.pos = _save
         break
@@ -3097,7 +3123,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # Function = CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name osp "(" FieldList?:args ")" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t, o)}
+  # Function = CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name osp "(" obsp FieldList?:args ")" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t, o)}
   def _Function
 
     _save = self.pos
@@ -3142,6 +3168,11 @@ class Stark::Parser
         break
       end
       _tmp = match_string("(")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_obsp)
       unless _tmp
         self.pos = _save
         break
@@ -3230,7 +3261,7 @@ class Stark::Parser
     return _tmp
   end
 
-  # Throws = osp "throws" osp "(" FieldList ")"
+  # Throws = osp "throws" osp "(" obsp FieldList ")"
   def _Throws
 
     _save = self.pos
@@ -3251,6 +3282,11 @@ class Stark::Parser
         break
       end
       _tmp = match_string("(")
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _tmp = apply(:_obsp)
       unless _tmp
         self.pos = _save
         break
@@ -4060,11 +4096,11 @@ class Stark::Parser
   Rules[:_CommaOrSemicolonOptional] = rule_info("CommaOrSemicolonOptional", "(\",\" | \";\")? obsp")
   Rules[:_Enum] = rule_info("Enum", "\"enum\" - tok_identifier:name osp \"{\" obsp EnumDefList:vals obsp \"}\" {enum(name, vals)}")
   Rules[:_EnumDefList] = rule_info("EnumDefList", "(EnumDefList:l EnumDef:e { l + [e] } | EnumDef:e { [e] })")
-  Rules[:_EnumDef] = rule_info("EnumDef", "(CaptureDocText tok_identifier \"=\" tok_int_constant CommaOrSemicolonOptional | CaptureDocText tok_identifier CommaOrSemicolonOptional)")
+  Rules[:_EnumDef] = rule_info("EnumDef", "(CaptureDocText tok_identifier osp \"=\" osp tok_int_constant CommaOrSemicolonOptional | CaptureDocText tok_identifier CommaOrSemicolonOptional)")
   Rules[:_Senum] = rule_info("Senum", "\"senum\" - tok_identifier \"{\" SenumDefList \"}\"")
   Rules[:_SenumDefList] = rule_info("SenumDefList", "(SenumDefList SenumDef | nothing)")
   Rules[:_SenumDef] = rule_info("SenumDef", "tok_literal CommaOrSemicolonOptional")
-  Rules[:_Const] = rule_info("Const", "\"const\" - FieldType tok_identifier \"=\" ConstValue CommaOrSemicolonOptional")
+  Rules[:_Const] = rule_info("Const", "\"const\" - FieldType tok_identifier osp \"=\" osp ConstValue CommaOrSemicolonOptional")
   Rules[:_ConstValue] = rule_info("ConstValue", "(tok_int_constant:i {const_int(i)} | tok_literal:s {const_str(s)} | tok_identifier:i {const_id(i)} | ConstList | ConstMap | tok_dub_constant:d {const_dbl(d)})")
   Rules[:_ConstList] = rule_info("ConstList", "\"[\" osp ConstListContents*:l osp \"]\" {const_list(l)}")
   Rules[:_ConstListContents] = rule_info("ConstListContents", "ConstValue:i CommaOrSemicolonOptional osp {i}")
@@ -4080,9 +4116,9 @@ class Stark::Parser
   Rules[:_Service] = rule_info("Service", "\"service\" - tok_identifier:name - Extends? osp \"{\" obsp FunctionList?:funcs obsp \"}\" {service(name, funcs)}")
   Rules[:_Extends] = rule_info("Extends", "\"extends\" - tok_identifier")
   Rules[:_FunctionList] = rule_info("FunctionList", "(FunctionList:l Function:f { l + [f] } | Function:f { [f] })")
-  Rules[:_Function] = rule_info("Function", "CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name osp \"(\" FieldList?:args \")\" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t, o)}")
+  Rules[:_Function] = rule_info("Function", "CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name osp \"(\" obsp FieldList?:args \")\" Throws?:t CommaOrSemicolonOptional {function(name, rt, args, t, o)}")
   Rules[:_OneWay] = rule_info("OneWay", "(\"oneway\" | \"async\") - { :oneway }")
-  Rules[:_Throws] = rule_info("Throws", "osp \"throws\" osp \"(\" FieldList \")\"")
+  Rules[:_Throws] = rule_info("Throws", "osp \"throws\" osp \"(\" obsp FieldList \")\"")
   Rules[:_FieldList] = rule_info("FieldList", "(FieldList:l Field:f { l + [f] } | Field:f { [f] })")
   Rules[:_Field] = rule_info("Field", "CaptureDocText FieldIdentifier?:i osp FieldRequiredness?:req osp FieldType:t osp tok_identifier:n osp FieldValue?:val CommaOrSemicolonOptional {field(i,t,n,val,req)}")
   Rules[:_FieldIdentifier] = rule_info("FieldIdentifier", "tok_int_constant:n \":\" {n}")
