@@ -2,7 +2,7 @@ require 'thrift'
 require 'logger'
 
 module Stark
-  VERSION = '0.9.3'
+  VERSION = '0.10.0'
 
   def self.logger
     @logger ||= ::Logger.new($stdout)
