@@ -217,7 +217,7 @@ Enum = "enum" - tok_identifier:name osp "{" obsp EnumDefList:vals obsp "}" ~enum
 EnumDefList = EnumDefList:l EnumDef:e { l + [e] }
             | EnumDef:e { [e] }
 
-EnumDef = CaptureDocText tok_identifier "=" tok_int_constant CommaOrSemicolonOptional
+EnumDef = CaptureDocText tok_identifier osp "=" osp tok_int_constant CommaOrSemicolonOptional
         | CaptureDocText tok_identifier CommaOrSemicolonOptional
 
 Senum = "senum" - tok_identifier "{" SenumDefList "}"
@@ -227,7 +227,7 @@ SenumDefList = SenumDefList SenumDef
 
 SenumDef = tok_literal CommaOrSemicolonOptional
 
-Const = "const" - FieldType tok_identifier "=" ConstValue CommaOrSemicolonOptional
+Const = "const" - FieldType tok_identifier osp "=" osp ConstValue CommaOrSemicolonOptional
 
 ConstValue = tok_int_constant:i ~const_int(i)
            | tok_literal:s ~const_str(s)
