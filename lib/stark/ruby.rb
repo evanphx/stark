@@ -62,6 +62,29 @@ module Stark
       end
     end
 
+    def const_to_ruby(val)
+      case val
+      when Stark::Parser::AST::ConstString
+        return %Q!"#{val.value}"!
+      when Stark::Parser::AST::ConstInt
+        return val.value
+      when Stark::Parser::AST::ConstDouble
+        return val.value
+      when Stark::Parser::AST::ConstIdentifier
+        return val.value.to_sym
+      when Stark::Parser::AST::ConstList
+        parts = val.values.map { |x| const_to_ruby(x) }
+        return "[#{parts.join(', ')}]"
+      when Stark::Parser::AST::ConstMap
+        parts = val.values.map { |(k,v)|
+                  const_to_ruby(k) + " => " + const_to_ruby(v)
+                }
+        return "{#{parts.join(', ')}}"
+      else
+        raise "Unsupported default type: #{val.class}"
+      end
+    end
+
     def write_field_declarations(fields)
       max_field_len = fields.inject(0) {|max,f| f.name.length > max ? f.name.length : max }
       max_index_len = fields.inject(0) {|max,f| f.index.to_s.length > max ? f.index.to_s.length : max }
@@ -73,7 +96,14 @@ module Stark
           current_index = f.index
         end
         current_index += 1
-        o("attr_accessor :%-*s  # %*s: %s" % [max_field_len, f.name, max_index_len, f.index, object_type(f.type)])
+
+        if f.value
+          o("attr_writer :%-*s  # %*s: %s" % [max_field_len, f.name, max_index_len, f.index, object_type(f.type)])
+
+          o("def %s; @%s || %s; end" % [f.name, f.name, const_to_ruby(f.value)])
+        else
+          o("attr_accessor :%-*s  # %*s: %s" % [max_field_len, f.name, max_index_len, f.index, object_type(f.type)])
+        end
       end
     end
 
