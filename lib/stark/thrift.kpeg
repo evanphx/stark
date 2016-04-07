@@ -274,12 +274,12 @@ FunctionList = FunctionList:l Function:f { l + [f] }
              | Function:f { [f] }
 
 Function = CaptureDocText OneWay?:o FunctionType:rt - tok_identifier:name
-           osp "(" FieldList?:args ")" Throws?:t CommaOrSemicolonOptional
+           osp "(" obsp FieldList?:args ")" Throws?:t CommaOrSemicolonOptional
            ~function(name, rt, args, t, o)
 
 OneWay = ("oneway" | "async") - { :oneway }
 
-Throws = osp "throws" osp "(" FieldList ")"
+Throws = osp "throws" osp "(" obsp FieldList ")"
 
 FieldList = FieldList:l Field:f { l + [f] }
           | Field:f { [f] }
